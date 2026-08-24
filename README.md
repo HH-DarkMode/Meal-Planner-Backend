@@ -65,7 +65,7 @@ Spring Boot vastaa sovelluksen liiketoimintalogiikasta, ravintoarvojen laskennas
 
 * **ghostinth3w1re95-cyber** — [GitHub-profiili](https://github.com/ghostinth3w1re95-cyber)
 * **[GitHub-käyttäjätunnus]** — [GitHub-profiili](https://github.com/USERNAME)
-* **[GitHub-käyttäjätunnus]** — [GitHub-profiili](https://github.com/USERNAME)
+* **tanjavatka** — [GitHub-profiili](https://github.com/tanjavatka)
 
 > Korvatkaa yllä olevat käyttäjätunnukset ja profiililinkit projektitiimin oikeilla GitHub-tiedoilla.
 
