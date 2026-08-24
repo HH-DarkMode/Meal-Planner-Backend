@@ -64,7 +64,7 @@ Spring Boot vastaa sovelluksen liiketoimintalogiikasta, ravintoarvojen laskennas
 ## Tiimi
 
 * **ghostinth3w1re95-cyber** — [GitHub-profiili](https://github.com/ghostinth3w1re95-cyber)
-* **[GitHub-käyttäjätunnus]** — [GitHub-profiili](https://github.com/USERNAME)
+* **SamuelFizumSemere** — [GitHub-profiili](https://github.com/SamuelFizumSemere)
 * **tanjavatka** — [GitHub-profiili](https://github.com/tanjavatka)
 * **cofitabs** — [GitHub-profiili](https://github.com/cofitabs)
 
