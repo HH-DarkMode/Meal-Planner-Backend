@@ -1,65 +1,47 @@
-# AI Meal Planner
+# AI Meal Planner – Backend
 
 ## Projektin kuvaus
 
-**AI Meal Planner** on verkkosovellus, jonka tarkoituksena on helpottaa käyttäjän ruokien ja aterioiden suunnittelua. Sovelluksessa hyödynnetään Finelin elintarviketietoja sekä tekoälyä, jonka avulla käyttäjälle voidaan muodostaa hänen tavoitteisiinsa sopivia aterioita ja reseptejä.
+**AI Meal Planner** on meal planner -sovelluksen backend, jonka tarkoituksena on tarjota REST API frontend-sovellukselle sekä huolehtia käyttäjien, reseptien, ravintoarvojen ja ruokasuunnitelmien hallinnasta.
 
-Sovelluksen tavoitteena on yhdistää ravintoarvotiedot ja tekoäly käytännölliseksi meal planner -sovellukseksi. Käyttäjä voi esimerkiksi määrittää päivittäisen kalorimäärän, proteiinitavoitteen sekä ruokavalioon liittyviä rajoitteita. Näiden tietojen perusteella sovellus voi muodostaa aterioita ja kokonaisia ruokasuunnitelmia.
+Backendin avulla käyttäjä voi muodostaa henkilökohtaisia ateriasuunnitelmia omien tavoitteidensa ja ruokamieltymystensä perusteella. Sovellus hyödyntää **Finelin** elintarvike- ja ravintotietoja sekä tekoälyä reseptien ja ateriasuunnitelmien muodostamiseen.
 
 ## Tärkeimmät ominaisuudet
 
-Sovelluksen alustavia ominaisuuksia ovat:
+Backendin tarkoituksena on mahdollistaa esimerkiksi:
 
-* Käyttäjä voi määrittää omat ravitsemustavoitteensa, kuten päivittäisen kalorimäärän ja proteiinitavoitteen.
-* Käyttäjä voi määrittää ruokavalioon liittyviä rajoitteita ja mieltymyksiä.
-* Sovellus hyödyntää Finelin elintarviketietoja ruoka-aineiden ravintoarvojen määrittämiseen.
-* Tekoäly voi yhdistää eri raaka-aineita ja muodostaa niistä reseptejä.
-* Sovellus voi muodostaa käyttäjälle päivä- tai viikkokohtaisen meal planin.
-* Käyttäjä voi tarkastella aterioiden ravintoarvoja.
-* Käyttäjä voi vaihtaa yksittäisen aterian tai reseptin toiseen.
-* Sovellus voi muodostaa meal planin perusteella ostoslistan.
-* Käyttäjä voi ilmoittaa käytettävissä olevia raaka-aineita, joita tekoäly voi hyödyntää resepteissä.
+* käyttäjän rekisteröityminen ja kirjautuminen
+* käyttäjän ruokavalio- ja ravitsemustavoitteiden tallentaminen
+* Finelin elintarviketietojen hyödyntäminen
+* elintarvikkeiden haku ja ravintoarvojen tarkastelu
+* reseptien luominen ja tallentaminen
+* tekoälyn avulla uusien reseptien muodostaminen
+* käyttäjän kalorimäärän ja makroravinteiden huomioiminen
+* päivittäisten ja viikoittaisten meal planien muodostaminen
+* olemassa olevan aterian vaihtaminen uuteen
+* ostoslistojen muodostaminen meal planin perusteella
+* aterioiden ravintoarvojen laskeminen Finelin tietojen perusteella
 
-Projektin edetessä ominaisuuksia ja niiden toteutustapaa voidaan tarkentaa.
+Tavoitteena on, että tekoäly vastaa reseptien ja aterioiden ehdottamisesta, kun taas backend laskee ja validoi ravintoarvot luotettavasti Finelin tietojen perusteella.
 
 ## Toteutusteknologiat
 
-Projektin alustaviksi toteutusteknologioiksi on suunniteltu:
-
-### Backend
+Backendin alustavasti suunnitellut teknologiat ovat:
 
 * **Java**
 * **Spring Boot**
-* Spring Web REST API:n toteuttamiseen
-* Spring Data JPA tietokantakäsittelyyn
-* **PostgreSQL** tietokantana
-* **Maven** projektinhallintaan
+* **Spring Web**
+* **Spring Data JPA**
+* **PostgreSQL**
+* **Flyway**
+* **Maven**
+* **Docker**
+* REST API
+* Finelin API / avoin data
+* tekoälypalvelun API
 
-### Frontend
+Teknologiat voivat muuttua projektin edetessä.
 
-Frontendin toteutuksessa tullaan alustavasti käyttämään:
-
-* **React**
-* **TypeScript**
-* HTML
-* CSS
-
-Frontend kommunikoi Spring Boot -backendin kanssa REST-rajapinnan avulla.
-
-### Ulkoiset palvelut ja data
-
-* **Fineli** elintarvikkeiden ja ravintoarvojen tietolähteenä
-* Tekoälypalvelun API reseptien ja ruokasuunnitelmien muodostamiseen
-
-Teknologiat ja käytettävät palvelut voivat muuttua projektin edetessä.
-
-## Alustava arkkitehtuuri
-
-Sovelluksen alustava rakenne on seuraava:
-
-
-
-Spring Boot vastaa sovelluksen liiketoimintalogiikasta, ravintoarvojen laskennasta ja ulkoisten palveluiden kanssa kommunikoinnista. Tekoälyä hyödynnetään erityisesti reseptien ja ruokasuunnitelmien muodostamisessa.
 
 ## Tiimi
 
