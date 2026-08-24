@@ -50,8 +50,6 @@ Teknologiat voivat muuttua projektin edetessä.
 * **tanjavatka** — [GitHub-profiili](https://github.com/tanjavatka)
 * **cofitabs** — [GitHub-profiili](https://github.com/cofitabs)
 
-> Korvatkaa yllä olevat käyttäjätunnukset ja profiililinkit projektitiimin oikeilla GitHub-tiedoilla.
-
 ## Projektin tila
 
 Projekti on tällä hetkellä suunnitteluvaiheessa. Projektin edetessä README-tiedostoa tullaan päivittämään vastaamaan toteutettua sovellusta ja käytettyjä teknologioita.
