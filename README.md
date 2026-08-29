@@ -53,3 +53,6 @@ Teknologiat voivat muuttua projektin edetessä.
 ## Projektin tila
 
 Projekti on tällä hetkellä suunnitteluvaiheessa. Projektin edetessä README-tiedostoa tullaan päivittämään vastaamaan toteutettua sovellusta ja käytettyjä teknologioita.
+
+## Backlog Linkki
+* **https://github.com/orgs/HH-DarkMode/projects/1**
