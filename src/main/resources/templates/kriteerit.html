@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fi" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>Kriteerit</title>
+</head>
+<body>
+	<h1>Lisää kriteerit</h1>
+	(Kaikki kentät valinnaisia)
+	
+	<form th:action="@{/post}" th:object="${kriteerit}" method="post">
+		<label for="kalorit">Kalorit</label>
+		<input type="number" id="kalorit" th:field="*{kalorit}" min="0" /><br/>
+		<span th:if="${#fields.hasErrors('kalorit')}" th:errors="*{kalorit}"></span>
+
+		<label for="hiilihydraatit">Hiilihydraatit</label>
+		<input type="number" id="hiilihydraatit" th:field="*{hiilihydraatit}" min="0" /><br/>
+		<span th:if="${#fields.hasErrors('hiilihydraatit')}" th:errors="*{hiilihydraatit}"></span>
+
+		<label for="proteiini">Proteiini</label>
+		<input type="number" id="proteiini" th:field="*{proteiini}" min="0" /><br/>
+		<span th:if="${#fields.hasErrors('proteiini')}" th:errors="*{proteiini}"></span>
+
+		<label for="rasva">Rasva</label>
+		<input type="number" id="rasva" th:field="*{rasva}" min="0" /><br/>
+		<span th:if="${#fields.hasErrors('rasva')}" th:errors="*{rasva}"></span>
+
+		<label for="annoskoko">Annoskoko (grammaa)</label>
+		<input type="number" id="annoskoko" th:field="*{annoskoko}" min="0" /><br/>
+		<span th:if="${#fields.hasErrors('annoskoko')}" th:errors="*{annoskoko}"></span>
+
+		<button type="submit">Lähetä</button>
+	</form>
+
+	<div th:if="${recipe}">
+		<h2>Reseptiehdotus</h2>
+		<pre th:text="${recipe}"></pre>
+	</div>
+
+	<h2>Tallennetut kriteerit</h2>
+	<table border="1">
+		<thead>
+			<tr>
+				<th>Id</th>
+				<th>Kalorit</th>
+				<th>Hiilihydraatit</th>
+				<th>Proteiini</th>
+				<th>Rasva</th>
+				<th>Annoskoko (g)</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="m : ${kriteeritList}">
+				<td th:text="${m.id}"></td>
+				<td th:text="${m.kalorit}"></td>
+				<td th:text="${m.hiilihydraatit}"></td>
+				<td th:text="${m.proteiini}"></td>
+				<td th:text="${m.rasva}"></td>
+				<td th:text="${m.annoskoko}"></td>
+				<td>
+					<form th:action="@{/kriteerit/{id}/resepti(id=${m.id})}" method="post">
+						<button type="submit">Ehdota resepti</button>
+					</form>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</body>
+</html>
