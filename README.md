@@ -56,3 +56,6 @@ Projekti on tällä hetkellä suunnitteluvaiheessa. Projektin edetessä README-t
 
 ## Backlog Linkki
 * **https://github.com/orgs/HH-DarkMode/projects/1**
+
+## Frontend Readme linkki
+* **https://github.com/HH-DarkMode/Meal-Planner-Frontend/blob/main/README.md**
