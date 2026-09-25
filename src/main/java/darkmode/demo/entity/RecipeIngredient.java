@@ -10,15 +10,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-import java.math.BigDecimal;
-
 /**
  * Yksi ainesosarivi reseptissä, esim. "6 cups cabbage, shredded".
- *  - quantity + unit_orig: alkuperäinen (amerikkalainen) määrä ja yksikkö
- *  - quantity_metric + unit_metric: muunnettu metrinen määrä (dl, rkl, tl, g, kpl)
- *  - food, grams ja ravintoarvokentät täytetään vain, kun ainesosa tunnistettiin
- *    JA määrä saatiin grammoiksi. Rivin food voi siis olla null, vaikka nimi on
- *    tunnistettu (ks. IngredientMatch), jos määrää ei voitu muuntaa.
+ * Reseptin avaamisnäkymä kokoaa rivin näistä osista: määrä, yksikkö, nimi ja lisätieto.
+ * Taulussa on muitakin sarakkeita (metriset määrät, grammat, ravintoarvot, Fineli-tunniste),
+ * mutta ne ovat vain ravintolaskennan välituloksia, eikä sovellus lue niitä.
  */
 @Entity
 @Table(name = "recipe_ingredients")
@@ -42,44 +38,16 @@ public class RecipeIngredient {
     @Column(name = "raw_text")
     private String rawText;
 
-    // Siivottu nimi (pienet kirjaimet, täytesanat pois). Tällä haetaan ingredient_matches-taulusta.
-    @Column(name = "ingredient_name_clean", nullable = false)
-    private String ingredientNameClean;
-
+    // Alkuperäinen (amerikkalainen) määrä ja yksikkö, esim. "6" ja "cups".
     @Column(name = "quantity")
     private String quantity;
 
     @Column(name = "unit_orig")
     private String unitOrig;
 
-    @Column(name = "quantity_metric")
-    private BigDecimal quantityMetric;
-
-    @Column(name = "unit_metric", length = 10)
-    private String unitMetric;
-
+    // Lisätieto, esim. "shredded" tai "diced".
     @Column(name = "misc")
     private String misc;
-
-    // Matchattu Fineli-elintarvike (voi olla null, jos ainesosaa ei saatu yhdistettya)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "foodid")
-    private Food food;
-
-    @Column(name = "grams")
-    private BigDecimal grams;
-
-    @Column(name = "energia_kj")
-    private Double energiaKj;
-
-    @Column(name = "proteiini")
-    private Double proteiini;
-
-    @Column(name = "hiilihydraatti")
-    private Double hiilihydraatti;
-
-    @Column(name = "rasva")
-    private Double rasva;
 
     public RecipeIngredient() {
     }
@@ -116,14 +84,6 @@ public class RecipeIngredient {
         this.rawText = rawText;
     }
 
-    public String getIngredientNameClean() {
-        return ingredientNameClean;
-    }
-
-    public void setIngredientNameClean(String ingredientNameClean) {
-        this.ingredientNameClean = ingredientNameClean;
-    }
-
     public String getQuantity() {
         return quantity;
     }
@@ -140,75 +100,11 @@ public class RecipeIngredient {
         this.unitOrig = unitOrig;
     }
 
-    public BigDecimal getQuantityMetric() {
-        return quantityMetric;
-    }
-
-    public void setQuantityMetric(BigDecimal quantityMetric) {
-        this.quantityMetric = quantityMetric;
-    }
-
-    public String getUnitMetric() {
-        return unitMetric;
-    }
-
-    public void setUnitMetric(String unitMetric) {
-        this.unitMetric = unitMetric;
-    }
-
     public String getMisc() {
         return misc;
     }
 
     public void setMisc(String misc) {
         this.misc = misc;
-    }
-
-    public Food getFood() {
-        return food;
-    }
-
-    public void setFood(Food food) {
-        this.food = food;
-    }
-
-    public BigDecimal getGrams() {
-        return grams;
-    }
-
-    public void setGrams(BigDecimal grams) {
-        this.grams = grams;
-    }
-
-    public Double getEnergiaKj() {
-        return energiaKj;
-    }
-
-    public void setEnergiaKj(Double energiaKj) {
-        this.energiaKj = energiaKj;
-    }
-
-    public Double getProteiini() {
-        return proteiini;
-    }
-
-    public void setProteiini(Double proteiini) {
-        this.proteiini = proteiini;
-    }
-
-    public Double getHiilihydraatti() {
-        return hiilihydraatti;
-    }
-
-    public void setHiilihydraatti(Double hiilihydraatti) {
-        this.hiilihydraatti = hiilihydraatti;
-    }
-
-    public Double getRasva() {
-        return rasva;
-    }
-
-    public void setRasva(Double rasva) {
-        this.rasva = rasva;
     }
 }

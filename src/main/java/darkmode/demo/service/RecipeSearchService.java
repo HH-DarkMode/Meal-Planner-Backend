@@ -183,9 +183,6 @@ public class RecipeSearchService {
                 r.getRecipeId(),
                 r.getName(),
                 r.getUrl(),
-                r.getCategory(),
-                r.getCuisine(),
-                r.getServings() == null ? null : r.getServings().doubleValue(),
                 r.getPrepTimeMin(),
                 r.getCookTimeMin(),
                 // Ravintoarvot ovat valmiiksi per annos (haku on jo karsinut reseptit ilman niitä).
@@ -194,8 +191,6 @@ public class RecipeSearchService {
                 round(r.getFatPerServing()),
                 round(r.getCarbsPerServing()),
                 r.getNutritionSource(),
-                r.getMatchedLines(),
-                r.getTotalLines(),
                 unmatched,
                 dietFilterActive && !unmatched.isEmpty()
         );
