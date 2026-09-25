@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Paikalliset tunnukset ###
+application-local.properties
+.env
