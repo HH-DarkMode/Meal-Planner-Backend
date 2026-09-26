@@ -23,6 +23,8 @@ public class Profile {
     private String username;
     private Integer weight;
     private Integer height;
+    // Aterioiden määrä päivässä (frontendin "Meals per day", 1-8). Sarake meals_per_day.
+    private Integer mealsPerDay;
     private String gender;
     private String goal;
     private Integer calories;
@@ -64,6 +66,14 @@ public class Profile {
 
     public void setHeight(Integer height) {
         this.height = height;
+    }
+
+    public Integer getMealsPerDay() {
+        return mealsPerDay;
+    }
+
+    public void setMealsPerDay(Integer mealsPerDay) {
+        this.mealsPerDay = mealsPerDay;
     }
 
     public String getGender() {

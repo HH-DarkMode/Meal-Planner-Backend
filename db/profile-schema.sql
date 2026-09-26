@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     username  VARCHAR(255),
     weight    INTEGER,
     height    INTEGER,
+    meals_per_day INTEGER,
     gender    VARCHAR(255),
     goal      VARCHAR(255),
     calories  INTEGER,
@@ -18,3 +19,6 @@ CREATE TABLE IF NOT EXISTS profile_diets (
     profile_id  BIGINT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     diets       VARCHAR(255)
 );
+
+-- Vanhoille kannoille, joissa profiles-taulu on jo olemassa ilman meals_per_day-saraketta:
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS meals_per_day INTEGER;
