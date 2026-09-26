@@ -171,6 +171,13 @@ Invoke-RestMethod "http://localhost:8080/api/recipes/search?calories=2500&size=2
 curl "http://localhost:8080/api/recipes/search?calories=2500&size=2"
 ```
 
+### Reseptihaun demosivu
+
+Backendin mukana tulee yksinkertainen demosivu, jolla reseptihaun ja reseptin tietojen toiminnan näkee ilman
+frontendiä: `http://localhost:8080/demo.html`. Sivu lataa tavoitteet profiilista, hakee ateriaehdotuksia tai päivän
+ateriat ja avaa reseptin ainekset ja ohjeet klikkaamalla. Se on tarkoitettu kehittäjille, ei käyttäjille.
+(Jos backend oli käynnissä ennen sivun lisäämistä, käynnistä se uudelleen.)
+
 ## 5. Käynnistä frontend
 
 Frontend on omassa repossaan (`HH-DarkMode/Meal-Planner-Frontend`), ja ajantasainen versio on haarassa `main`.
