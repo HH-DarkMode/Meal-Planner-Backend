@@ -39,10 +39,11 @@ public class RecipeSearchService {
     /** Kuinka monesta parhaasta osumasta arvotaan lopulliset ehdotukset. */
     private static final int TOP_POOL_SIZE = 30;
 
-    /** Kuinka suuri osa paivan energiasta kullekin aterialle. */
+    /** Kuinka suuri osa paivan energiasta kullekin aterialle (yhteensa 100 %). */
     private static final double BREAKFAST_SHARE = 0.25;
-    private static final double LUNCH_SHARE = 0.35;
-    private static final double DINNER_SHARE = 0.40;
+    private static final double LUNCH_SHARE = 0.30;
+    private static final double SNACK_SHARE = 0.15;
+    private static final double DINNER_SHARE = 0.30;
 
     private final RecipeRepository recipeRepository;
 
@@ -55,11 +56,12 @@ public class RecipeSearchService {
         return findSuggestions(request, null, size);
     }
 
-    /** Paivan ehdotukset: optionsPerMeal vaihtoehtoa aamiaiselle, lounaalle ja paivalliselle. */
+    /** Paivan ehdotukset: optionsPerMeal vaihtoehtoa aamiaiselle, lounaalle, valipalalle ja paivalliselle. */
     public DayPlanDto planDay(RecipeSearchRequest daily, int optionsPerMeal) {
         return new DayPlanDto(
                 findMealOptions(daily, "Breakfast", BREAKFAST_SHARE, optionsPerMeal),
                 findMealOptions(daily, "Lunch", LUNCH_SHARE, optionsPerMeal),
+                findMealOptions(daily, "Snack", SNACK_SHARE, optionsPerMeal),
                 findMealOptions(daily, "Dinner", DINNER_SHARE, optionsPerMeal)
         );
     }
