@@ -1,0 +1,21 @@
+# Estaa nama paatymasta Docker-build-kontekstiin (Docker ei noudata .gitignorea,
+# joten tama on tarpeen erikseen). Tarkein rivi on application-local.properties:
+# ilman tata paikallinen tietokantasalasanasi voisi paatya leivottuna Docker-kuvaan,
+# jos rakennat kuvan koneellasi jossa tiedosto on olemassa.
+target/
+.mvn/wrapper/maven-wrapper.jar
+**/.idea/
+**/*.iws
+**/*.iml
+**/*.ipr
+**/.vscode/
+**/.classpath
+**/.project
+**/.settings/
+
+# Paikalliset tunnukset - ei koskaan Docker-kuvaan
+**/application-local.properties
+.env
+
+# Oma kehitysdokumentaatio, ei tarpeen ajossa
+docs/
