@@ -35,18 +35,18 @@ public class RecipeIngredient {
     private Integer lineNo;
 
     // Ainesosan nimi sellaisena kuin lähdedata sen antaa (ei sisällä määrää).
-    @Column(name = "raw_text")
+    @Column(name = "raw_text", columnDefinition = "TEXT")
     private String rawText;
 
     // Alkuperäinen (amerikkalainen) määrä ja yksikkö, esim. "6" ja "cups".
-    @Column(name = "quantity")
+    @Column(name = "quantity", columnDefinition = "TEXT")
     private String quantity;
 
-    @Column(name = "unit_orig")
+    @Column(name = "unit_orig", columnDefinition = "TEXT")
     private String unitOrig;
 
     // Lisätieto, esim. "shredded" tai "diced".
-    @Column(name = "misc")
+    @Column(name = "misc", columnDefinition = "TEXT")
     private String misc;
 
     public RecipeIngredient() {

@@ -29,10 +29,10 @@ public class Recipe {
     @Column(name = "recipe_id")
     private Integer recipeId;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, columnDefinition = "TEXT")
     private String name;
 
-    @Column(name = "author")
+    @Column(name = "author", columnDefinition = "TEXT")
     private String author;
 
     @Column(name = "recipe_date")
@@ -51,10 +51,10 @@ public class Recipe {
     private Integer cookTimeMin;
 
     // Merkkijono muodossa "['Dinner', 'Lunch']", josta ateriatyyppiä haetaan LIKE-vertailulla.
-    @Column(name = "category")
+    @Column(name = "category", columnDefinition = "TEXT")
     private String category;
 
-    @Column(name = "cuisine")
+    @Column(name = "cuisine", columnDefinition = "TEXT")
     private String cuisine;
 
     // Annosmäärä. Tarvitaan, koska calc_*-arvot ovat koko reseptin summia.
@@ -65,10 +65,10 @@ public class Recipe {
     private Integer numSteps;
 
     // Valmistusohjeet yhtenä tekstinä, vaiheet erotettu merkinnällä " | ".
-    @Column(name = "instructions")
+    @Column(name = "instructions", columnDefinition = "TEXT")
     private String instructions;
 
-    @Column(name = "url")
+    @Column(name = "url", columnDefinition = "TEXT")
     private String url;
 
     // Alkuperaisen lahteen (AllRecipes) ilmoittamat arvot per annos
