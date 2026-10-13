@@ -53,28 +53,34 @@ public class RecipeSearchService {
 
     /** Yksittainen haku: palauttaa size kpl arvottuja ehdotuksia parhaiden osumien joukosta. */
     public List<RecipeSummaryDto> search(RecipeSearchRequest request, int size) {
-        return findSuggestions(request, null, size);
+        return findSuggestions(request, null, size, resolveDietCompatibleIds(request.diets()));
     }
 
-    /** Paivan ehdotukset: optionsPerMeal vaihtoehtoa aamiaiselle, lounaalle, valipalalle ja paivalliselle. */
+    /**
+     * Paivan ehdotukset: optionsPerMeal vaihtoehtoa aamiaiselle, lounaalle, valipalalle ja paivalliselle.
+     * Ruokavaliosopivuus (resolveDietCompatibleIds) lasketaan tassa vain kertaalleen koko paivalle,
+     * silla sama ruokavaliovalinta on sama jokaiselle aterialle - muuten sama (hidas) SQL-kysely
+     * ajettaisiin turhaan nelja kertaa per /plan-pyynto.
+     */
     public DayPlanDto planDay(RecipeSearchRequest daily, int optionsPerMeal) {
+        Set<Integer> dietCompatibleIds = resolveDietCompatibleIds(daily.diets());
         return new DayPlanDto(
-                findMealOptions(daily, "Breakfast", BREAKFAST_SHARE, optionsPerMeal),
-                findMealOptions(daily, "Lunch", LUNCH_SHARE, optionsPerMeal),
-                findMealOptions(daily, "Snack", SNACK_SHARE, optionsPerMeal),
-                findMealOptions(daily, "Dinner", DINNER_SHARE, optionsPerMeal)
+                findMealOptions(daily, "Breakfast", BREAKFAST_SHARE, optionsPerMeal, dietCompatibleIds),
+                findMealOptions(daily, "Lunch", LUNCH_SHARE, optionsPerMeal, dietCompatibleIds),
+                findMealOptions(daily, "Snack", SNACK_SHARE, optionsPerMeal, dietCompatibleIds),
+                findMealOptions(daily, "Dinner", DINNER_SHARE, optionsPerMeal, dietCompatibleIds)
         );
     }
 
     /** Skaalaa paivatavoitteen yhden aterian osuuteen ja hakee sen ateriatyypin reseptit. */
     private List<RecipeSummaryDto> findMealOptions(RecipeSearchRequest daily, String category,
-                                                   double share, int count) {
+                                                   double share, int count, Set<Integer> dietCompatibleIds) {
         RecipeSearchRequest meal = new RecipeSearchRequest(
                 scale(daily.calories(), share), scale(daily.protein(), share),
                 scale(daily.fat(), share), scale(daily.carbs(), share),
                 1, daily.tolerance(), daily.diets()
         );
-        return findSuggestions(meal, category, count);
+        return findSuggestions(meal, category, count, dietCompatibleIds);
     }
 
     private static Double scale(Double value, double share) {
@@ -89,7 +95,8 @@ public class RecipeSearchService {
      * 3. Jarjestetaan makrojen mukaan: lahinna tavoitesuhdetta ensin.
      * 4. Parhaiden joukosta arvotaan count kpl, jotta ehdotukset vaihtelevat.
      */
-    private List<RecipeSummaryDto> findSuggestions(RecipeSearchRequest request, String category, int count) {
+    private List<RecipeSummaryDto> findSuggestions(RecipeSearchRequest request, String category, int count,
+                                                    Set<Integer> dietCompatibleIds) {
         // 1. Kaloriväli per ateria: päivätavoite / aterioiden määrä, plusmiinus toleranssi.
         //    null tarkoittaa "ei rajoitusta" (jos tavoitetta ei annettu).
         Double minCalories = null;
@@ -109,7 +116,7 @@ public class RecipeSearchService {
 
         // 2. Erikoisruokavaliot: pidetään vain reseptit, joiden id on sopivien joukossa.
         //    null = yhtään ruokavaliorajausta ei pyydetty, jolloin kaikki reseptit kelpaavat.
-        Set<Integer> dietCompatibleIds = resolveDietCompatibleIds(request.diets());
+        //    (dietCompatibleIds lasketaan kutsujan toimesta kertaalleen, ks. search()/planDay())
         if (dietCompatibleIds != null) {
             recipes = recipes.stream()
                     .filter(r -> dietCompatibleIds.contains(r.getRecipeId()))
