@@ -1,6 +1,5 @@
 package darkmode.demo.profile;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -9,9 +8,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * CORS-asetus tulee globaalista CorsConfig-luokasta (app.cors.allowed-origins).
+ * Oma @CrossOrigin täällä syrjäyttäisi sen tälle kontrollerille, joten sitä ei käytetä.
+ */
 @RestController
 @RequestMapping("/api/profile")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:4173"})
 public class ProfileController {
     private final ProfileRepository profileRepository;
 
