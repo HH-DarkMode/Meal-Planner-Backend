@@ -59,3 +59,8 @@ Projekti on tällä hetkellä suunnitteluvaiheessa. Projektin edetessä README-t
 
 ## Frontend Readme linkki
 * **https://github.com/HH-DarkMode/Meal-Planner-Frontend/blob/main/README.md**
+
+## Projektin julkaisu linkit
+
+[Frontend](https://ai-meal-planner-darkmode.onrender.com/)
+[Backend](https://api-darkmode-aimealplanner.2.rahtiapp.fi/)
