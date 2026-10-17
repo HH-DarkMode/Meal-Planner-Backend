@@ -62,5 +62,6 @@ Projekti on tällä hetkellä suunnitteluvaiheessa. Projektin edetessä README-t
 
 ## Projektin julkaisu linkit
 
-[Frontend](https://ai-meal-planner-darkmode.onrender.com/)
-[Backend](https://api-darkmode-aimealplanner.2.rahtiapp.fi/)
+* **[Frontend](https://ai-meal-planner-darkmode.onrender.com/)**
+  
+* **[Backend](https://api-darkmode-aimealplanner.2.rahtiapp.fi/)**
