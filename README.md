@@ -65,3 +65,5 @@ Projekti on tällä hetkellä suunnitteluvaiheessa. Projektin edetessä README-t
 * **[Frontend](https://ai-meal-planner-darkmode.onrender.com/)**
   
 * **[Backend](https://api-darkmode-aimealplanner.2.rahtiapp.fi/)**
+
+* **[SwaggerUi](https://api-darkmode-aimealplanner.2.rahtiapp.fi/swagger-ui/index.html)**
