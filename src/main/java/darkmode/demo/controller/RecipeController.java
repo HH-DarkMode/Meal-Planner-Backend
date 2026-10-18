@@ -6,6 +6,8 @@ import darkmode.demo.dto.RecipeSearchRequest;
 import darkmode.demo.dto.RecipeSummaryDto;
 import darkmode.demo.service.RecipeDetailService;
 import darkmode.demo.service.RecipeSearchService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -52,7 +54,7 @@ public class RecipeController {
             @RequestParam(required = false) Set<String> diets,
             // Montako ehdotusta palautetaan. Ne arvotaan makroiltaan parhaiden joukosta
             // (vähintään 30 parasta); osumia voi tulla vähemmän, jos sopivia reseptejä on vähän.
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size
     ) {
         // Kootaan parametrit yhdeksi pyyntöolioksi, jonka service ymmärtää.
         RecipeSearchRequest request = new RecipeSearchRequest(
@@ -75,7 +77,7 @@ public class RecipeController {
             @RequestParam(required = false) Double carbs,
             @RequestParam(defaultValue = "0.2") double tolerance,
             @RequestParam(required = false) Set<String> diets,
-            @RequestParam(defaultValue = "5") int optionsPerMeal
+            @RequestParam(defaultValue = "5") @Min(1) @Max(50) int optionsPerMeal
     ) {
         // mealsPerDay = 1, koska service jakaa päivän tavoitteen itse aterioille (25/30/15/30 %).
         RecipeSearchRequest request = new RecipeSearchRequest(
