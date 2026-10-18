@@ -11,4 +11,6 @@ public interface MealPlanSelectionRepository extends JpaRepository<MealPlanSelec
     List<MealPlanSelection> findByProfileIdAndPlanDate(Long profileId, LocalDate planDate);
 
     Optional<MealPlanSelection> findByProfileIdAndPlanDateAndMealType(Long profileId, LocalDate planDate, String mealType);
+
+    void deleteByProfileIdAndPlanDate(Long profileId, LocalDate planDate);
 }
