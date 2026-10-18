@@ -17,7 +17,7 @@ import java.util.Set;
 /**
  * Reseptirajapinta (REST). Kaikki endpointit palauttavat JSONia.
  *  - GET /api/recipes/search : ehdotuksia yhdelle ateriale
- *  - GET /api/recipes/plan   : päivän ateriaehdotukset (aamiainen, lounas, päivällinen)
+ *  - GET /api/recipes/plan   : päivän ateriaehdotukset (aamiainen, lounas, välipala, päivällinen)
  *  - GET /api/recipes/{id}   : yhden reseptin ainekset ja valmistusohjeet
  * Controller vain vastaanottaa parametrit ja kutsuu palvelua; varsinainen logiikka on service-kerroksessa.
  */
@@ -50,6 +50,8 @@ public class RecipeController {
             @RequestParam(defaultValue = "3") int mealsPerDay,
             @RequestParam(defaultValue = "0.2") double tolerance,
             @RequestParam(required = false) Set<String> diets,
+            // Montako ehdotusta palautetaan. Ne arvotaan makroiltaan parhaiden joukosta
+            // (vähintään 30 parasta); osumia voi tulla vähemmän, jos sopivia reseptejä on vähän.
             @RequestParam(defaultValue = "10") int size
     ) {
         // Kootaan parametrit yhdeksi pyyntöolioksi, jonka service ymmärtää.
@@ -62,8 +64,8 @@ public class RecipeController {
 
     /**
      * Ehdottaa koko päivän ateriat: optionsPerMeal vaihtoehtoa aamiaiselle,
-     * lounaalle ja päivälliselle. Päivän energia jaetaan aterioille
-     * (aamiainen 25 %, lounas 35 %, päivällinen 40 %).
+     * lounaalle, välipalalle ja päivälliselle. Päivän energia jaetaan aterioille
+     * (aamiainen 25 %, lounas 30 %, välipala 15 %, päivällinen 30 %).
      */
     @GetMapping("/api/recipes/plan")
     public DayPlanDto plan(
@@ -75,7 +77,7 @@ public class RecipeController {
             @RequestParam(required = false) Set<String> diets,
             @RequestParam(defaultValue = "5") int optionsPerMeal
     ) {
-        // mealsPerDay = 1, koska service jakaa päivän tavoitteen itse aterioille (25/35/40 %).
+        // mealsPerDay = 1, koska service jakaa päivän tavoitteen itse aterioille (25/30/15/30 %).
         RecipeSearchRequest request = new RecipeSearchRequest(
                 calories, protein, fat, carbs, 1, tolerance,
                 diets == null ? Set.of() : diets
