@@ -63,6 +63,12 @@ public class MealPlanService {
         return toDto(recipe);
     }
 
+    /** Poistaa kaikki tämän päivän hyväksynnät, jolloin reseptisivu ehdottaa taas kaikille aterioille. */
+    @Transactional
+    public void clearTodaysSelections() {
+        selectionRepository.deleteByProfileIdAndPlanDate(PROFILE_ID, LocalDate.now());
+    }
+
     // dietWarning/unmatchedIngredients eivät ole merkityksellisiä tässä (ei ruokavaliosuodatinta
     // aktiivisena), joten ne jätetään tyhjäksi/falseksi.
     private static RecipeSummaryDto toDto(Recipe r) {
