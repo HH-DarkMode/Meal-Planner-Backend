@@ -1,6 +1,6 @@
 # AI Meal Planner – Backend
 
-#[![Backend CI](https://github.com/HH-DarkMode/Meal-Planner-Backend/actions/workflows/ci.yml/badge.svg)](https://github.com/HH-DarkMode/Meal-Planner-Backend/actions/workflows/ci.yml)
+[![Backend CI](https://github.com/HH-DarkMode/Meal-Planner-Backend/actions/workflows/ci.yml/badge.svg)](https://github.com/HH-DarkMode/Meal-Planner-Backend/actions/workflows/ci.yml)
 
 ## Projektin kuvaus
 
