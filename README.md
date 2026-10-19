@@ -1,5 +1,7 @@
 # AI Meal Planner – Backend
 
+#[![Backend CI](https://github.com/HH-DarkMode/Meal-Planner-Backend/actions/workflows/ci.yml/badge.svg)](https://github.com/HH-DarkMode/Meal-Planner-Backend/actions/workflows/ci.yml)
+
 ## Projektin kuvaus
 
 **AI Meal Planner** on meal planner -sovelluksen backend, jonka tarkoituksena on tarjota REST API frontend-sovellukselle sekä huolehtia käyttäjien, reseptien, ravintoarvojen ja ruokasuunnitelmien hallinnasta.
