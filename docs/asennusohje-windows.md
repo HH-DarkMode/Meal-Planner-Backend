@@ -1,6 +1,6 @@
 # Asennusohje (Windows)
 
-*Laadittu 19.10.2026.*
+*Laadittu 19.10.2026, päivitetty 23.10.2026.*
 
 Tällä ohjeella AI Meal Plannerin saa käyntiin omalla Windows-koneella: PostgreSQL-tietokanta, backend
 (Spring Boot) ja frontend (React + Vite). Ohje on tehty Windows 10:lle ja 11:lle. Linuxin ja macOS:n erot
@@ -276,15 +276,18 @@ Testit eivät tarvitse tietokantaa. CI ajaa samat testit GitHubissa jokaisessa P
 Avaa **uusi** PowerShell-ikkuna, koska backendin ikkunan pitää jäädä auki. Aja komennot kansiossa
 `C:\projektit\mealplanner\Meal-Planner-Frontend`.
 
-### 6.1 Kerro frontendille backendin osoite
+### 6.1 Backendin osoite
 
-Frontend lukee backendin osoitteen tiedostosta `.env`. Tiedosto ei ole gitissä, joten luo se:
+Frontend lukee backendin osoitteen muuttujasta `VITE_BACKEND_URL`. Repossa on valmiina kaksi tiedostoa,
+joten mitään ei tarvitse luoda:
 
-```powershell
-Set-Content .env "VITE_BACKEND_URL=http://localhost:8080"
-```
+| Tiedosto | Arvo | Milloin käytetään |
+|---|---|---|
+| `.env` | `http://localhost:8080` | `npm run dev` (paikallinen kehitys) |
+| `.env.production` | Rahdin backend | `npm run build` (julkaisu) |
 
-Ilman tätä tiedostoa frontend yrittää kutsua osoitetta `undefined/api/...`, eikä mikään data lataudu.
+Muuta `.env`-tiedostoa vain, jos ajat backendiä muussa portissa kuin 8080. Älä commitoi omia muutoksiasi
+siihen, koska tiedosto on yhteinen koko tiimille.
 
 ### 6.2 Asenna riippuvuudet ja käynnistä
 
@@ -350,7 +353,7 @@ käynnistämistä.
 | `Schema-validation: missing column` | Tietokanta on luotu vanhemmalla dumpilla. Aja `db/profile-schema.sql` ja `db/recipe-nutrition.sql` kohdan 4.4 tapaan. Molemmat voi ajaa uudelleen turvallisesti. |
 | `invalid byte sequence` tai `has no equivalent in encoding "WIN1252"` datan latauksessa | Tietokanta on luotu ilman UTF-8:aa tai `PGCLIENTENCODING` puuttuu. Poista kanta (`psql -U postgres -h localhost -c "DROP DATABASE mealplanner;"`), luo se uudelleen kohdan 4.1 komennolla ja lataa data uudelleen. |
 | `Port 8080 was already in use` | Toinen backend on jo käynnissä. Katso alta, miten löydät ja sammutat sen. |
-| Frontend näyttää "Could not load recipes. Is the backend running?" | Backend ei ole käynnissä, tai `.env` puuttuu (kohta 6.1). Käynnistä `npm run dev` uudelleen aina kun `.env` muuttuu. |
+| Frontend näyttää "Could not load recipes. Is the backend running?" | Backend ei ole käynnissä portissa 8080, tai `.env`-tiedoston osoite on muutettu (kohta 6.1). Käynnistä `npm run dev` uudelleen aina kun `.env` muuttuu. |
 | Selaimen konsolissa on `CORS`-virhe | Frontend toimii muussa portissa kuin 5173 tai 4173. Backend sallii vain nämä portit (asetus `app.cors.allowed-origins` tiedostossa `application.properties`). |
 
 **Kuka käyttää porttia 8080?**
@@ -375,5 +378,4 @@ Vaiheet ovat samat, mutta muutama komento on erilainen:
 | `PGCLIENTENCODING` (4.3, 4.4) | `$env:PGCLIENTENCODING = "UTF8"` | ei tarvita |
 | Tunnusten kopiointi (5.1) | `Copy-Item ...` | `cp src/main/resources/application-local.properties.example src/main/resources/application-local.properties` |
 | Backendin käynnistys (5.2) | `.\mvnw.cmd spring-boot:run` | `./mvnw spring-boot:run` |
-| `.env`-tiedosto (6.1) | `Set-Content .env "..."` | `echo "VITE_BACKEND_URL=http://localhost:8080" > .env` |
 | Portin 8080 käyttäjä | `netstat -ano \| findstr :8080` | `lsof -i :8080` tai `ss -ltnp \| grep :8080` |
