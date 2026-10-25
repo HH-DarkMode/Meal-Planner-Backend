@@ -54,8 +54,22 @@ jobs:
               echo "| Surefire tests | ❌ Failed or unavailable |"
             fi
             echo
-            echo "Executed test classes:"
-            find target/surefire-reports -name 'TEST-*.xml' -printf '%f\n' 2>/dev/null | sort | sed 's/^/- /' || true
+            echo "### Executed test classes"
+            echo
+            echo "| Test class | Tests | Failures | Errors | Skipped |"
+            echo "|---|---:|---:|---:|---:|"
+            for report in target/surefire-reports/*.txt; do
+              [ -f "$report" ] || continue
+              class_name=$(basename "$report" .txt)
+              result=$(grep "Tests run:" "$report" | tail -n 1 || true)
+              if [ -n "$result" ]; then
+                tests=$(echo "$result" | sed -n 's/.*Tests run: \([0-9]*\), Failures: \([0-9]*\), Errors: \([0-9]*\), Skipped: \([0-9]*\).*/\1/p')
+                failures=$(echo "$result" | sed -n 's/.*Tests run: \([0-9]*\), Failures: \([0-9]*\), Errors: \([0-9]*\), Skipped: \([0-9]*\).*/\2/p')
+                errors=$(echo "$result" | sed -n 's/.*Tests run: \([0-9]*\), Failures: \([0-9]*\), Errors: \([0-9]*\), Skipped: \([0-9]*\).*/\3/p')
+                skipped=$(echo "$result" | sed -n 's/.*Tests run: \([0-9]*\), Failures: \([0-9]*\), Errors: \([0-9]*\), Skipped: \([0-9]*\).*/\4/p')
+                echo "| \`$class_name\` | $tests | $failures | $errors | $skipped |"
+              fi
+            done
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload backend test reports
