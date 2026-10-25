@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-and-test:
-    name: Build and Test
+    name: Backend CI
     runs-on: ubuntu-latest
 
     steps:
@@ -24,11 +24,46 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '17'
           cache: maven
 
       - name: Make mvnw executable
         run: chmod +x mvnw
 
-      - name: Build and run tests
-        run: ./mvnw -B clean verify
+      - name: Compile production code
+        run: ./mvnw -B -DskipTests compile
+
+      - name: Run all backend tests
+        run: ./mvnw -B test
+
+      - name: Package backend
+        run: ./mvnw -B -DskipTests package
+
+      - name: Publish backend test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Backend test summary"
+            echo
+            echo "| Test report | Result |"
+            echo "|---|---|"
+            if grep -q "Failures: 0, Errors: 0" target/surefire-reports/*.txt 2>/dev/null; then
+              echo "| Surefire tests | ✅ Passed |"
+            else
+              echo "| Surefire tests | ❌ Failed or unavailable |"
+            fi
+            echo
+            echo "Executed test classes:"
+            find target/surefire-reports -name 'TEST-*.xml' -printf '%f\n' 2>/dev/null | sort | sed 's/^/- /' || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: |
+            target/surefire-reports/
+            target/*.jar
+          if-no-files-found: warn
