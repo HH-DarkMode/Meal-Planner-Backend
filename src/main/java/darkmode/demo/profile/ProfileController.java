@@ -6,7 +6,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import darkmode.demo.auth.User;
+import darkmode.demo.auth.UserRepository;
+import org.springframework.security.core.Authentication;
 
 /**
  * CORS-asetus tulee globaalista CorsConfig-luokasta (app.cors.allowed-origins).
@@ -16,37 +18,29 @@ import java.util.List;
 @RequestMapping("/api/profile")
 public class ProfileController {
     private final ProfileRepository profileRepository;
+    private final UserRepository userRepository;
 
-    public ProfileController(ProfileRepository profileRepository) {
+    public ProfileController(ProfileRepository profileRepository, UserRepository userRepository) {
         this.profileRepository = profileRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
-    public Profile getProfile() {
-        return profileRepository.findById(1L)
-                .orElseGet(() -> profileRepository.save(defaultProfile()));
+    public Profile getProfile(Authentication authentication) {
+        User user = currentUser(authentication);
+        return profileRepository.findByUserId(user.getId()).orElseGet(Profile::new);
     }
 
     @PutMapping
-    public Profile saveProfile(@RequestBody Profile profile) {
-        profile.setId(1L);
+    public Profile saveProfile(@RequestBody Profile profile, Authentication authentication) {
+        User user = currentUser(authentication);
+        profileRepository.findByUserId(user.getId()).ifPresent(existing -> profile.setId(existing.getId()));
+        profile.setUser(user);
         return profileRepository.save(profile);
     }
 
-    private Profile defaultProfile() {
-        Profile profile = new Profile();
-
-        profile.setUsername("Samuel");
-        profile.setWeight(80);
-        profile.setHeight(180);
-        profile.setGender("mies");
-        profile.setGoal("healthy");
-        profile.setDiets(List.of("vegetarian"));
-        profile.setCalories(2500);
-        profile.setProtein(160);
-        profile.setFat(70);
-        profile.setCarbs(280);
-
-        return profile;
+    private User currentUser(Authentication authentication) {
+        return userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists"));
     }
 }
