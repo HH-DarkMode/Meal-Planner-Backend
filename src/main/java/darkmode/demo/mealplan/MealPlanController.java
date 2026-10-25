@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
 
 import java.util.Map;
 
@@ -26,17 +27,17 @@ public class MealPlanController {
     }
 
     @GetMapping("/selections")
-    public Map<String, RecipeSummaryDto> getSelections() {
-        return mealPlanService.getTodaysSelections();
+    public Map<String, RecipeSummaryDto> getSelections(Authentication authentication) {
+        return mealPlanService.getTodaysSelections(authentication);
     }
 
     @PutMapping("/selections")
-    public RecipeSummaryDto selectMeal(@RequestBody SelectMealRequest request) {
-        return mealPlanService.selectMeal(request.mealType(), request.recipeId());
+    public RecipeSummaryDto selectMeal(@RequestBody SelectMealRequest request, Authentication authentication) {
+        return mealPlanService.selectMeal(request.mealType(), request.recipeId(), authentication);
     }
 
     @DeleteMapping("/selections")
-    public void clearSelections() {
-        mealPlanService.clearTodaysSelections();
+    public void clearSelections(Authentication authentication) {
+        mealPlanService.clearTodaysSelections(authentication);
     }
 }
