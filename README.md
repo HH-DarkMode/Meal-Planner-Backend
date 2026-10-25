@@ -50,6 +50,16 @@ Data on koottu etukäteen Python-skripteillä yhdeksi PostgreSQL-dumpiksi. Ajon 
 
 Hakuparametrit ja vastausten rakenne löytyvät [Swagger UI:sta](https://api-darkmode-aimealplanner.2.rahtiapp.fi/swagger-ui/index.html).
 
+## Testit
+
+Backendin testit kattavat yksikkötestien lisäksi REST-endpointtien HTTP-tason
+käyttäytymisen (`RestApiTest`) ja Spring Boot -integraation autentikoinnista
+profiilin tallennukseen (`IntegrationTest`). Testit ajetaan komennolla:
+
+```powershell
+.\mvnw.cmd test
+```
+
 ## Toteutusteknologiat
 
 * **Java** (17 tai uudempi, julkaisussa 25)
