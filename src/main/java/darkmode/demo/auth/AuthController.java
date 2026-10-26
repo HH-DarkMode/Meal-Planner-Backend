@@ -64,6 +64,10 @@ public class AuthController {
 
     @GetMapping("/me")
     public AuthResponse me(org.springframework.security.core.Authentication authentication) {
+        // /api/auth/** on julkinen, joten kirjautumattomalla pyynnöllä authentication on null.
+        if (authentication == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
+        }
         return new AuthResponse(authentication.getName());
     }
 

@@ -78,6 +78,26 @@ Ohje backendin, tietokannan ja frontendin asentamiseen: **[docs/asennusohje-wind
 
 Tietokannan dump-tiedosto ei ole repossa sen koon takia, joten pyydä se tiimiltä.
 
+## Julkaisu Rahtiin
+
+Rahti buildaa ja julkaisee backendin automaattisesti, kun `main`-haaraan tulee muutos (GitHub-webhook). Deployment `meal-planner-backend-git` käyttää profiilia `rahti` ([application-rahti.properties](src/main/resources/application-rahti.properties)) ja tarvitsee seuraavat ympäristömuuttujat:
+
+| Muuttuja | Lähde | Kuvaus |
+|---|---|---|
+| `SPRING_PROFILES_ACTIVE` | arvo `rahti` | Ottaa käyttöön Rahti-profiilin |
+| `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Secret `db` | Tietokannan tunnukset |
+| `JWT_SECRET` | Secret `jwt` | JWT-tokenien allekirjoitusavain (vähintään 32 merkkiä). Pakollinen: ilman sitä sovellus ei käynnisty |
+| `CORS_ALLOWED_ORIGINS` | arvo | Frontendin julkinen osoite |
+| `COOKIE_SECURE` | valinnainen | Oletus Rahdissa `true`. Tarvitaan, koska frontend ja backend ovat eri sivustoilla |
+
+Jos deployment luodaan uudelleen, JWT-avaimen saa liitettyä komennolla:
+
+```bash
+oc set env deployment/meal-planner-backend-git --from=secret/jwt
+```
+
+JWT-avainta ei tallenneta repoon. Avaimen vaihtaminen kirjaa kaikki käyttäjät ulos.
+
 ## Tietojen lähteet ja lisenssit
 
 * Ravintoarvot: **[Fineli](https://fineli.fi/)**, Terveyden ja hyvinvoinnin laitos (THL), Release 20. Lisenssi CC BY 4.0.
