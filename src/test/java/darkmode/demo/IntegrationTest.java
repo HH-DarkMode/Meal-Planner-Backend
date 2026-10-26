@@ -89,6 +89,20 @@ class IntegrationTest {
     @Test
     void protectedProfileEndpointRejectsRequestsWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/profile"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void meEndpointRejectsRequestsWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void publicEndpointsWorkWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk());
     }
 }
