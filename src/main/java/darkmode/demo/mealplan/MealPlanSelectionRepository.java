@@ -10,7 +10,18 @@ public interface MealPlanSelectionRepository extends JpaRepository<MealPlanSelec
 
     List<MealPlanSelection> findByProfileIdAndPlanDate(Long profileId, LocalDate planDate);
 
-    Optional<MealPlanSelection> findByProfileIdAndPlanDateAndMealType(Long profileId, LocalDate planDate, String mealType);
+    Optional<MealPlanSelection> findByProfileIdAndPlanDateAndMealType(Long profileId, LocalDate planDate,
+            String mealType);
 
     void deleteByProfileIdAndPlanDate(Long profileId, LocalDate planDate);
+
+    /**
+     * Hakee profiilin kaikki valitut ateriat aikaväliltä from-to (molemmat päivät
+     * mukana) päivämäärän mukaiseen järjestykseen. Kalenteri käyttää tätä
+     * hakeakseen koko kuukauden kerralla. Spring muodostaa SQL-kyselyn
+     * metodin nimestä: Between = väli, OrderByPlanDate = järjestys päivän mukaan.
+     */
+    List<MealPlanSelection> findByProfileIdAndPlanDateBetweenOrderByPlanDate(Long profileId, LocalDate from,
+            LocalDate to);
+
 }
