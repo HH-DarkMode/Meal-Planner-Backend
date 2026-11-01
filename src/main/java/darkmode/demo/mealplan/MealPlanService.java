@@ -61,8 +61,14 @@ public class MealPlanService {
         return result;
     }
 
+    /**
+     * Tallentaa reseptin annetun päivän ateriatyypille (oletus: tämä päivä).
+     * Jos päivän ateriatyypille oli jo resepti, se korvataan. Jos resepti vaihtuu,
+     * syöty-merkintä nollataan, koska uutta reseptiä ei ole vielä syöty.
+     */
     @Transactional
-    public RecipeSummaryDto selectMeal(String mealType, Integer recipeId, Authentication authentication) {
+    public RecipeSummaryDto selectMeal(String mealType, Integer recipeId, LocalDate date,
+            Authentication authentication) {
         if (!MEAL_TYPES.contains(mealType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tuntematon ateriatyyppi: " + mealType);
         }
@@ -73,14 +79,20 @@ public class MealPlanService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tallenna profiili ennen aterian valitsemista");
         }
 
-        LocalDate today = LocalDate.now();
+        LocalDate planDate = date != null ? date : LocalDate.now();
         MealPlanSelection selection = selectionRepository
-                .findByProfileIdAndPlanDateAndMealType(profileId, today, mealType)
+                .findByProfileIdAndPlanDateAndMealType(profileId, planDate, mealType)
                 .orElseGet(MealPlanSelection::new);
+        // Jos päivän aterian resepti vaihtuu, uutta reseptiä ei ole vielä syöty.
+        boolean recipeChanged = selection.getRecipe() == null
+                || !recipeId.equals(selection.getRecipe().getRecipeId());
         selection.setProfileId(profileId);
-        selection.setPlanDate(today);
+        selection.setPlanDate(planDate);
         selection.setMealType(mealType);
         selection.setRecipe(recipe);
+        if (recipeChanged) {
+            selection.setEaten(false);
+        }
         selectionRepository.save(selection);
         return toDto(recipe);
     }
@@ -91,6 +103,24 @@ public class MealPlanService {
         if (profileId != null) {
             selectionRepository.deleteByProfileIdAndPlanDate(profileId, LocalDate.now());
         }
+    }
+
+    /**
+     * Merkitsee yhden suunnitellun aterian syödyksi tai syömättömäksi.
+     * Ateria haetaan käyttäjän omasta profiilista päivän ja ateriatyypin mukaan.
+     * Jos ateriaa ei ole suunnitelmassa, palautetaan virhe 404.
+     */
+    @Transactional
+    public void setEaten(LocalDate date, String mealType, boolean eaten, Authentication authentication) {
+        Long profileId = currentProfileId(authentication);
+        if (profileId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tallenna profiili ensin");
+        }
+        MealPlanSelection selection = selectionRepository
+                .findByProfileIdAndPlanDateAndMealType(profileId, date, mealType)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ateriaa ei löydy suunnitelmasta"));
+        selection.setEaten(eaten);
+        selectionRepository.save(selection);
     }
 
     private Long currentProfileId(Authentication authentication) {
