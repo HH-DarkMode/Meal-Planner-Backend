@@ -15,13 +15,15 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 
 /**
- * Yksi käyttäjän reseptisivulla hyväksymä resepti tietylle päivälle ja ateriatyypille
- * (Breakfast/Lunch/Snack/Dinner). Uusi hyväksyntä samalle päivälle ja ateriatyypille
+ * Yksi käyttäjän reseptisivulla hyväksymä resepti tietylle päivälle ja
+ * ateriatyypille
+ * (Breakfast/Lunch/Snack/Dinner). Uusi hyväksyntä samalle päivälle ja
+ * ateriatyypille
  * korvaa edellisen (ks. MealPlanService.selectMeal).
  */
 @Entity
-@Table(name = "meal_plan_selections",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"profile_id", "plan_date", "meal_type"}))
+@Table(name = "meal_plan_selections", uniqueConstraints = @UniqueConstraint(columnNames = { "profile_id", "plan_date",
+        "meal_type" }))
 public class MealPlanSelection {
 
     @Id
@@ -36,6 +38,9 @@ public class MealPlanSelection {
 
     @Column(name = "meal_type", nullable = false)
     private String mealType;
+
+    @Column(name = "eaten", nullable = false)
+    private boolean eaten;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipe_id", nullable = false)
@@ -74,6 +79,14 @@ public class MealPlanSelection {
 
     public void setMealType(String mealType) {
         this.mealType = mealType;
+    }
+
+    public boolean isEaten() {
+        return eaten;
+    }
+
+    public void setEaten(boolean eaten) {
+        this.eaten = eaten;
     }
 
     public Recipe getRecipe() {
