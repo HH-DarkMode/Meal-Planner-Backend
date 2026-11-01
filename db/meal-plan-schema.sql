@@ -8,5 +8,10 @@ CREATE TABLE IF NOT EXISTS meal_plan_selections (
     plan_date  DATE NOT NULL,
     meal_type  VARCHAR(20) NOT NULL,
     recipe_id  INTEGER NOT NULL REFERENCES recipes(recipe_id),
+    eaten      BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE (profile_id, plan_date, meal_type)
 );
+
+-- Jo olemassa olevaan tauluun (ajetaan kerran, turvallista ajaa uudelleen)
+ALTER TABLE meal_plan_selections
+    ADD COLUMN IF NOT EXISTS eaten BOOLEAN NOT NULL DEFAULT FALSE;
