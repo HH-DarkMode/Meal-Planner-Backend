@@ -3,8 +3,10 @@ package darkmode.demo.mealplan;
 import darkmode.demo.dto.MealPlanEntryDto;
 import darkmode.demo.dto.RecipeSummaryDto;
 import darkmode.demo.dto.SelectMealRequest;
+import darkmode.demo.dto.SetEatenRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,7 +41,7 @@ public class MealPlanController {
 
     @PutMapping("/selections")
     public RecipeSummaryDto selectMeal(@RequestBody SelectMealRequest request, Authentication authentication) {
-        return mealPlanService.selectMeal(request.mealType(), request.recipeId(), authentication);
+        return mealPlanService.selectMeal(request.mealType(), request.recipeId(), request.date(), authentication);
     }
 
     @DeleteMapping("/selections")
@@ -60,6 +62,15 @@ public class MealPlanController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             Authentication authentication) {
         return mealPlanService.getSelections(from, to, authentication);
+    }
+
+    /**
+     * Merkitsee aterian syödyksi tai syömättömäksi (mealplan-sivun täppä).
+     * Pyynnön runko: { "date": "2026-11-23", "mealType": "Lunch", "eaten": true }
+     */
+    @PatchMapping("/selections/eaten")
+    public void setEaten(@RequestBody SetEatenRequest request, Authentication authentication) {
+        mealPlanService.setEaten(request.date(), request.mealType(), request.eaten(), authentication);
     }
 
 }
