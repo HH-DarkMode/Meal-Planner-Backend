@@ -2,6 +2,7 @@ package darkmode.demo.mealplan;
 
 import darkmode.demo.auth.User;
 import darkmode.demo.auth.UserRepository;
+import darkmode.demo.dto.MealPlanEntryDto;
 import darkmode.demo.dto.RecipeSummaryDto;
 import darkmode.demo.entity.Recipe;
 import darkmode.demo.profile.Profile;
@@ -14,12 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Tallentaa käyttäjän reseptisivulla hyväksymät reseptit päivän ateriasuunnitelmaan.
+ * Tallentaa käyttäjän reseptisivulla hyväksymät reseptit päivän
+ * ateriasuunnitelmaan.
  * Valinnat tallennetaan kirjautuneen käyttäjän profiilille.
  */
 @Service
@@ -31,6 +34,9 @@ public class MealPlanService {
     private final RecipeRepository recipeRepository;
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
+
+    /* tietojen haku max 62 pvän ajalta */
+    private static final int MAX_RANGE_DAYS = 62;
 
     public MealPlanService(
             MealPlanSelectionRepository selectionRepository,
@@ -47,7 +53,8 @@ public class MealPlanService {
     public Map<String, RecipeSummaryDto> getTodaysSelections(Authentication authentication) {
         Map<String, RecipeSummaryDto> result = new LinkedHashMap<>();
         Long profileId = currentProfileId(authentication);
-        if (profileId == null) return result;
+        if (profileId == null)
+            return result;
         for (MealPlanSelection selection : selectionRepository.findByProfileIdAndPlanDate(profileId, LocalDate.now())) {
             result.put(selection.getMealType(), toDto(selection.getRecipe()));
         }
@@ -105,7 +112,28 @@ public class MealPlanService {
                 recipe.getCarbsPerServing(),
                 recipe.getNutritionSource(),
                 List.of(),
-                false
-        );
+                false);
     }
+
+    /**
+     * Hakee kirjautuneen käyttäjän valitut ateriat aikaväliltä from-to (molemmat
+     * päivät mukana). Palauttaa jokaisesta rivistä päivän, ateriatyypin,
+     * syöty-tilan ja reseptin makrot kalenteria varten. Aikaväli saa olla enintään
+     * MAX_RANGE_DAYS päivää, muuten palautetaan virhe 400. Jos käyttäjällä ei ole
+     * profiilia, palautetaan tyhjä lista.
+     */
+    @Transactional(readOnly = true)
+    public List<MealPlanEntryDto> getSelections(LocalDate from, LocalDate to, Authentication authentication) {
+        if (to.isBefore(from) || ChronoUnit.DAYS.between(from, to) > MAX_RANGE_DAYS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Virheellinen aikaväli");
+        }
+        Long profileId = currentProfileId(authentication);
+        if (profileId == null)
+            return List.of();
+        return selectionRepository.findByProfileIdAndPlanDateBetweenOrderByPlanDate(profileId, from, to)
+                .stream()
+                .map(s -> new MealPlanEntryDto(s.getPlanDate(), s.getMealType(), s.isEaten(), toDto(s.getRecipe())))
+                .toList();
+    }
+
 }
