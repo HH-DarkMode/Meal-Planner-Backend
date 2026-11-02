@@ -22,3 +22,14 @@ CREATE TABLE IF NOT EXISTS profile_diets (
 
 -- Vanhoille kannoille, joissa profiles-taulu on jo olemassa ilman meals_per_day-saraketta:
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS meals_per_day INTEGER;
+
+-- Kayttajat (User-entiteetti, paketti darkmode.demo.auth). Luotava ennen profiles.user_id-saraketta,
+-- koska sarake viittaa tahan tauluun.
+CREATE TABLE IF NOT EXISTS users (
+    id             BIGSERIAL PRIMARY KEY,
+    username       VARCHAR(255) UNIQUE,
+    password_hash  VARCHAR(255)
+);
+
+-- Profiilin omistaja (Profile.user, @OneToOne). Vanhoille profiileille jaa tyhjaksi.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS user_id BIGINT UNIQUE REFERENCES users(id);
