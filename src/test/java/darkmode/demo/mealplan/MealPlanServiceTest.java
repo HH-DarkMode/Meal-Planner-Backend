@@ -64,13 +64,15 @@ class MealPlanServiceTest {
         profile.setId(42L);
         org.mockito.Mockito.when(userRepository.findByUsername("user-a")).thenReturn(java.util.Optional.of(user));
         org.mockito.Mockito.when(profileRepository.findByUserId(null)).thenReturn(java.util.Optional.of(profile));
-        org.mockito.Mockito.when(selectionRepository.findByProfileIdAndPlanDate(
-                org.mockito.Mockito.eq(42L), org.mockito.Mockito.any())).thenReturn(java.util.List.of());
+        // Vaihe 4: tämän päivän haku palauttaa vain hyväksytyt (ACCEPTED)
+        org.mockito.Mockito.when(selectionRepository.findByProfileIdAndPlanDateAndStatus(
+                org.mockito.Mockito.eq(42L), org.mockito.Mockito.any(), org.mockito.Mockito.eq(MealPlanStatus.ACCEPTED)))
+                .thenReturn(java.util.List.of());
 
         service.getTodaysSelections(authentication("user-a"));
 
-        org.mockito.Mockito.verify(selectionRepository).findByProfileIdAndPlanDate(
-                org.mockito.Mockito.eq(42L), org.mockito.Mockito.any());
+        org.mockito.Mockito.verify(selectionRepository).findByProfileIdAndPlanDateAndStatus(
+                org.mockito.Mockito.eq(42L), org.mockito.Mockito.any(), org.mockito.Mockito.eq(MealPlanStatus.ACCEPTED));
     }
 
     /** Liian pitkä aikaväli (yli 62 päivää) hylätään virheellä 400. */
@@ -103,7 +105,9 @@ class MealPlanServiceTest {
         selection.setRecipe(recipe(5));
         LocalDate from = LocalDate.of(2026, 11, 1);
         LocalDate to = LocalDate.of(2026, 11, 30);
-        when(selectionRepository.findByProfileIdAndPlanDateBetweenOrderByPlanDate(42L, from, to))
+        // Vaihe 4: kalenteri hakee vain hyväksytyt (ACCEPTED)
+        when(selectionRepository.findByProfileIdAndPlanDateBetweenAndStatusOrderByPlanDate(
+                42L, from, to, MealPlanStatus.ACCEPTED))
                 .thenReturn(List.of(selection));
 
         // teko
@@ -115,6 +119,40 @@ class MealPlanServiceTest {
         assertThat(result.get(0).mealType()).isEqualTo("Lunch");
         assertThat(result.get(0).eaten()).isTrue();
         assertThat(result.get(0).recipe().recipeId()).isEqualTo(5);
+        assertThat(result.get(0).status()).isEqualTo("ACCEPTED");
+    }
+
+    /** Vaihe 4: ehdotusta (ei hyväksytty) ei voi merkitä syödyksi: virhe 409. */
+    @Test
+    void setEatenRejectsSuggestion() {
+        givenUserWithProfile(42L);
+        LocalDate date = LocalDate.of(2026, 11, 23);
+        MealPlanSelection suggestion = new MealPlanSelection();
+        suggestion.setStatus(MealPlanStatus.SUGGESTED);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Lunch"))
+                .thenReturn(Optional.of(suggestion));
+
+        assertThatThrownBy(() -> service.setEaten(date, "Lunch", true, authentication("user-a")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        assertThat(suggestion.isEaten()).isFalse();
+    }
+
+    /** Vaihe 4: Recipes-sivun "Add to meal plan" muuttaa viikkonäkymän ehdotuksen hyväksytyksi. */
+    @Test
+    void selectMealAcceptsExistingSuggestion() {
+        givenUserWithProfile(42L);
+        when(recipeRepository.findById(5)).thenReturn(Optional.of(recipe(5)));
+        LocalDate date = LocalDate.of(2026, 11, 23);
+        MealPlanSelection suggestion = new MealPlanSelection();
+        suggestion.setRecipe(recipe(5));
+        suggestion.setStatus(MealPlanStatus.SUGGESTED);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Lunch"))
+                .thenReturn(Optional.of(suggestion));
+
+        service.selectMeal("Lunch", 5, date, authentication("user-a"));
+
+        assertThat(suggestion.getStatus()).isEqualTo(MealPlanStatus.ACCEPTED);
     }
 
     /** Täppä: aterian syöty-tila tallentuu käyttäjän omaan riviin. */

@@ -19,6 +19,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Tallentaa käyttäjän reseptisivulla hyväksymät reseptit päivän
@@ -53,7 +54,9 @@ public class MealPlanService {
         Long profileId = currentProfileId(authentication);
         if (profileId == null)
             return result;
-        for (MealPlanSelection selection : selectionRepository.findByProfileIdAndPlanDate(profileId, LocalDate.now())) {
+        // Vain hyväksytyt, jotta viikkonäkymän ehdotukset eivät näy Recipes-sivulla "Added"-tilassa.
+        for (MealPlanSelection selection : selectionRepository.findByProfileIdAndPlanDateAndStatus(
+                profileId, LocalDate.now(), MealPlanStatus.ACCEPTED)) {
             result.put(selection.getMealType(), toDto(selection.getRecipe()));
         }
         return result;
@@ -89,6 +92,9 @@ public class MealPlanService {
         selection.setPlanDate(planDate);
         selection.setMealType(mealType);
         selection.setRecipe(recipe);
+        // Recipes-sivun "Add to meal plan": rivi on aina hyväksytty.
+        // Jos samalla aterialla oli viikkonäkymän ehdotus, se muuttuu hyväksytyksi.
+        selection.setStatus(MealPlanStatus.ACCEPTED);
         if (recipeChanged) {
             selection.setEaten(false);
         }
@@ -118,14 +124,33 @@ public class MealPlanService {
         MealPlanSelection selection = selectionRepository
                 .findByProfileIdAndPlanDateAndMealType(profileId, date, mealType)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ateriaa ei löydy suunnitelmasta"));
+        // Vain hyväksytyn aterian voi merkitä syödyksi (ehdotusta ei ole otettu suunnitelmaan).
+        if (selection.getStatus() != MealPlanStatus.ACCEPTED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Vain hyväksytyn aterian voi merkitä syödyksi");
+        }
         selection.setEaten(eaten);
         selectionRepository.save(selection);
     }
 
-    private Long currentProfileId(Authentication authentication) {
+    /**
+     * Kirjautuneen käyttäjän profiili (tyhjä, jos profiilia ei ole vielä tallennettu).
+     * Näkyvyys "package-private" (ei private): WeekPlanService samassa paketissa käyttää tätä.
+     */
+    Optional<Profile> currentProfile(Authentication authentication) {
         User user = userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists"));
-        return profileRepository.findByUserId(user.getId()).map(Profile::getId).orElse(null);
+        return profileRepository.findByUserId(user.getId());
+    }
+
+    private Long currentProfileId(Authentication authentication) {
+        return currentProfile(authentication).map(Profile::getId).orElse(null);
+    }
+
+    /** Tietokannan rivi -> JSON-vastauksen rivi (päivä, ateria, syöty, resepti, tila). Kalenteri käyttää tätä. */
+    static MealPlanEntryDto toEntryDto(MealPlanSelection s) {
+        return new MealPlanEntryDto(s.getPlanDate(), s.getMealType(), s.isEaten(),
+                toDto(s.getRecipe()), s.getStatus().name());
     }
 
     private static RecipeSummaryDto toDto(Recipe recipe) {
@@ -159,9 +184,11 @@ public class MealPlanService {
         Long profileId = currentProfileId(authentication);
         if (profileId == null)
             return List.of();
-        return selectionRepository.findByProfileIdAndPlanDateBetweenOrderByPlanDate(profileId, from, to)
+        // Kalenteri näyttää vain hyväksytyt ateriat (ehdotukset eivät ole suunnitelmaa).
+        return selectionRepository.findByProfileIdAndPlanDateBetweenAndStatusOrderByPlanDate(
+                        profileId, from, to, MealPlanStatus.ACCEPTED)
                 .stream()
-                .map(s -> new MealPlanEntryDto(s.getPlanDate(), s.getMealType(), s.isEaten(), toDto(s.getRecipe())))
+                .map(MealPlanService::toEntryDto)
                 .toList();
     }
 
