@@ -41,9 +41,10 @@ public class AuthController {
         User user = new User();
         user.setUsername(credentials.username().trim());
         user.setPasswordHash(passwordEncoder.encode(credentials.password()));
-        userRepository.save(user);
-        writeCookie(response, jwtService.createToken(user));
-        return new AuthResponse(user.getUsername());
+        user = userRepository.save(user);
+        String token = jwtService.createToken(user);
+        writeCookie(response, token);
+        return new AuthResponse(user.getUsername(), token);
     }
 
     @PostMapping("/login")
@@ -52,8 +53,9 @@ public class AuthController {
         User user = userRepository.findByUsername(credentials.username().trim())
                 .filter(candidate -> passwordEncoder.matches(credentials.password(), candidate.getPasswordHash()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password"));
-        writeCookie(response, jwtService.createToken(user));
-        return new AuthResponse(user.getUsername());
+        String token = jwtService.createToken(user);
+        writeCookie(response, token);
+        return new AuthResponse(user.getUsername(), token);
     }
 
     @PostMapping("/logout")
@@ -63,12 +65,12 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public AuthResponse me(org.springframework.security.core.Authentication authentication) {
+    public UserResponse me(org.springframework.security.core.Authentication authentication) {
         // /api/auth/** on julkinen, joten kirjautumattomalla pyynnöllä authentication on null.
         if (authentication == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not logged in");
         }
-        return new AuthResponse(authentication.getName());
+        return new UserResponse(authentication.getName());
     }
 
     private void validate(Credentials credentials) {
@@ -93,5 +95,6 @@ public class AuthController {
     }
 
     public record Credentials(String username, String password) {}
-    public record AuthResponse(String username) {}
+    public record AuthResponse(String username, String token) {}
+    public record UserResponse(String username) {}
 }

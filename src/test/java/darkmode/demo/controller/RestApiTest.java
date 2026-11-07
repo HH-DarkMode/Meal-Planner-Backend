@@ -31,6 +31,7 @@ class RestApiTest {
 
     private MockMvc mockMvc;
     private RecipeSearchService recipeSearchService;
+    private UserRepository userRepository;
 
     @BeforeEach
     void setUp() {
@@ -38,8 +39,10 @@ class RestApiTest {
         RecipeController recipeController = new RecipeController(
                 recipeSearchService,
                 mock(RecipeDetailService.class));
+        userRepository = mock(UserRepository.class);
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         AuthController authController = new AuthController(
-                mock(UserRepository.class),
+                userRepository,
                 new BCryptPasswordEncoder(),
                 new JwtService("test-secret-with-at-least-32-characters", 900_000),
                 false);
@@ -81,6 +84,7 @@ class RestApiTest {
                                 new AuthController.Credentials("new-user", "password-123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("new-user"))
+                .andExpect(jsonPath("$.token").isNotEmpty())
                 .andExpect(cookie().httpOnly("access_token", true));
     }
 }

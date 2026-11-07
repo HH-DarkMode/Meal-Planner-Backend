@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -53,10 +54,18 @@ class IntegrationTest {
                 .andExpect(jsonPath("$.username").value("integration-user"))
                 .andReturn();
 
+        String token = objectMapper.readTree(registration.getResponse().getContentAsString())
+                .get("token").asText();
+        org.assertj.core.api.Assertions.assertThat(token).isNotBlank();
         var accessToken = registration.getResponse().getCookie("access_token");
         org.assertj.core.api.Assertions.assertThat(accessToken).isNotNull();
 
         mockMvc.perform(get("/api/profile").cookie(accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").doesNotExist());
+
+        mockMvc.perform(get("/api/profile")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").doesNotExist());
 
@@ -84,12 +93,45 @@ class IntegrationTest {
                 .andExpect(jsonPath("$.username").value("integration-user"))
                 .andExpect(jsonPath("$.mealsPerDay").value(4))
                 .andExpect(jsonPath("$.calories").value(2200));
+
+        mockMvc.perform(get("/api/profile")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("integration-user"))
+                .andExpect(jsonPath("$.mealsPerDay").value(4))
+                .andExpect(jsonPath("$.calories").value(2200));
     }
 
     @Test
     void protectedProfileEndpointRejectsRequestsWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/profile"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void loginReturnsTokenThatAuthenticatesBearerRequests() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"login-user","password":"password-123"}
+                                """))
+                .andExpect(status().isOk());
+
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"login-user","password":"password-123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("login-user"))
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andReturn();
+
+        String token = objectMapper.readTree(login.getResponse().getContentAsString())
+                .get("token").asText();
+        mockMvc.perform(get("/api/profile")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
     }
 
     @Test

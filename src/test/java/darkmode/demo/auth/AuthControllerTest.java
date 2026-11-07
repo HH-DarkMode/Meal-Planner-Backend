@@ -52,6 +52,9 @@ class AuthControllerTest {
                 new AuthController.Credentials(" new-user ", "password-123"), response);
 
         assertThat(result.username()).isEqualTo("new-user");
+        assertThat(result.token()).isNotBlank();
+        assertThat(new JwtService("test-secret-with-at-least-32-characters", 900_000)
+                .getUsername(result.token())).isEqualTo("new-user");
         org.mockito.ArgumentCaptor<User> captor = org.mockito.ArgumentCaptor.forClass(User.class);
         org.mockito.Mockito.verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getPasswordHash()).isNotEqualTo("password-123");

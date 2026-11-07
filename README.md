@@ -21,10 +21,10 @@ Reseptit ovat **Zenodon Culinary Recipes Dataset** -aineistosta (noin 50 000 All
 * varoitus, jos ruokavaliosopivuutta ei voi taata, koska osaa ainesosista ei tunnistettu Finelistä
 * reseptin ainesosat ja valmistusohjeet
 * päivän ateriasuunnitelman valintojen tallentaminen ja tyhjentäminen
+* käyttäjän rekisteröityminen ja kirjautuminen JWT-tokenilla
 
 ### Suunnitteilla
 
-* käyttäjän rekisteröityminen ja kirjautuminen (nyt sovelluksessa on yksi yhteinen profiili)
 * viikon meal plan
 
 ## Miten reseptit ja ravintoarvot on muodostettu
@@ -38,8 +38,26 @@ Data on koottu etukäteen Python-skripteillä yhdeksi PostgreSQL-dumpiksi. Ajon 
 
 ## REST API
 
+Rekisteröidy tai kirjaudu sisään endpointissa `POST /api/auth/register` tai
+`POST /api/auth/login`. Vastauksessa palautetaan `username` ja frontendille JWT
+`token`:
+
+```json
+{
+  "username": "oma-käyttäjä",
+  "token": "<jwt>"
+}
+```
+
+Lähetä token kirjautumisen jälkeisissä API-kutsuissa otsakkeessa
+`Authorization: Bearer <jwt>`. Backend asettaa edelleen myös HttpOnly-evästeen,
+joten nykyinen evästepohjainen käyttö säilyy. Kirjaudu ulos poistamalla token
+frontendin tallennuksesta ja kutsumalla halutessasi `POST /api/auth/logout`.
+
 | Endpoint | Kuvaus |
 |---|---|
+| `POST /api/auth/register`, `POST /api/auth/login` | rekisteröityminen ja kirjautuminen; vastaus sisältää JWT-tokenin |
+| `GET /api/auth/me` | kirjautuneen käyttäjän tiedot |
 | `GET /api/recipes/search` | reseptiehdotuksia yhdelle aterialle |
 | `GET /api/recipes/plan` | päivän ateriaehdotukset aamiaiselle, lounaalle, välipalalle ja päivälliselle |
 | `GET /api/recipes/{id}` | yhden reseptin ainesosat ja valmistusohjeet |
