@@ -166,6 +166,52 @@ class MealPlanServiceTest {
         assertThat(saved.getValue().isEaten()).isFalse();
     }
 
+    /**
+     * Vaihe 1: Recipes-sivun "Add to meal plan" tallentaa rivin hyväksyttynä (ACCEPTED),
+     * kuten ennen status-saraketta. Varmistaa, ettei vanha toiminta muutu.
+     */
+    @Test
+    void selectMealSavesNewSelectionAsAccepted() {
+        // valmistelu: käyttäjällä on profiili, eikä päivällisellä ole vielä riviä
+        givenUserWithProfile(42L);
+        when(recipeRepository.findById(5)).thenReturn(Optional.of(recipe(5)));
+        LocalDate date = LocalDate.of(2026, 11, 25);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Dinner"))
+                .thenReturn(Optional.empty());
+
+        // teko: käyttäjä hyväksyy reseptin päivälliseksi
+        service.selectMeal("Dinner", 5, date, authentication("user-a"));
+
+        // tarkistus: tallennetun rivin tila on ACCEPTED
+        ArgumentCaptor<MealPlanSelection> saved = ArgumentCaptor.forClass(MealPlanSelection.class);
+        verify(selectionRepository).save(saved.capture());
+        assertThat(saved.getValue().getStatus()).isEqualTo(MealPlanStatus.ACCEPTED);
+    }
+
+    /** Vaihe 2: uudet ateriannimet (esim. "Morning snack") voi tallentaa suunnitelmaan. */
+    @Test
+    void selectMealAcceptsNewMealTypes() {
+        givenUserWithProfile(42L);
+        when(recipeRepository.findById(5)).thenReturn(Optional.of(recipe(5)));
+        LocalDate date = LocalDate.of(2026, 11, 25);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Morning snack"))
+                .thenReturn(Optional.empty());
+
+        service.selectMeal("Morning snack", 5, date, authentication("user-a"));
+
+        ArgumentCaptor<MealPlanSelection> saved = ArgumentCaptor.forClass(MealPlanSelection.class);
+        verify(selectionRepository).save(saved.capture());
+        assertThat(saved.getValue().getMealType()).isEqualTo("Morning snack");
+    }
+
+    /** Tuntematon ateriannimi hylätään virheellä 400 (Bad Request). */
+    @Test
+    void selectMealRejectsUnknownMealType() {
+        assertThatThrownBy(() -> service.selectMeal("Brunch", 5, LocalDate.of(2026, 11, 25), authentication("user-a")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
     /** Vanha toiminta säilyy: ilman päivää resepti tallentuu tälle päivälle. */
     @Test
     void selectMealWithoutDateUsesToday() {

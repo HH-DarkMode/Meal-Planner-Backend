@@ -28,8 +28,6 @@ import java.util.Map;
 @Service
 public class MealPlanService {
 
-    private static final List<String> MEAL_TYPES = List.of("Breakfast", "Lunch", "Snack", "Dinner");
-
     private final MealPlanSelectionRepository selectionRepository;
     private final RecipeRepository recipeRepository;
     private final UserRepository userRepository;
@@ -69,7 +67,8 @@ public class MealPlanService {
     @Transactional
     public RecipeSummaryDto selectMeal(String mealType, Integer recipeId, LocalDate date,
             Authentication authentication) {
-        if (!MEAL_TYPES.contains(mealType)) {
+        // Sallitut ateriat tulevat MealSlots-taulukosta (8 nimeä, esim. "Morning snack").
+        if (!MealSlots.isKnownMealType(mealType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tuntematon ateriatyyppi: " + mealType);
         }
         Recipe recipe = recipeRepository.findById(recipeId)
