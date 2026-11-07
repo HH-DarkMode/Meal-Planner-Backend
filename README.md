@@ -59,12 +59,16 @@ frontendin tallennuksesta ja kutsumalla halutessasi `POST /api/auth/logout`.
 | `POST /api/auth/register`, `POST /api/auth/login` | rekisteröityminen ja kirjautuminen; vastaus sisältää JWT-tokenin |
 | `GET /api/auth/me` | kirjautuneen käyttäjän tiedot |
 | `GET /api/recipes/search` | reseptiehdotuksia yhdelle aterialle |
-| `GET /api/recipes/plan` | päivän ateriaehdotukset aamiaiselle, lounaalle, välipalalle ja päivälliselle |
 | `GET /api/recipes/{id}` | yhden reseptin ainesosat ja valmistusohjeet |
 | `GET /api/profile`, `PUT /api/profile` | käyttäjän profiilin haku ja tallennus |
-| `GET /api/meal-plan/selections` | tämän päivän valitut ateriat |
-| `PUT /api/meal-plan/selections` | reseptin valinta ateriatyypille |
-| `DELETE /api/meal-plan/selections` | tämän päivän valintojen tyhjennys |
+| `GET /api/meal-plan/week?start=&today=` | viikkosuunnitelma; luo puuttuvat ehdotukset |
+| `PATCH /api/meal-plan/selections/status` | aterian hyväksyntä tai sen peruminen |
+| `POST /api/meal-plan/selections/reroll` | uusi ehdotus yhteen ateriaan |
+| `POST /api/meal-plan/day/accept` | päivän kaikkien ehdotusten hyväksyntä |
+| `PATCH /api/meal-plan/selections/eaten` | syöty-merkintä |
+| `GET /api/meal-plan/selections?from=&to=` | hyväksytyt ateriat aikaväliltä (kalenteri) |
+| `GET /api/meal-plan/meal-types` | käyttäjän päivän ateriat järjestyksessä |
+| `PUT /api/meal-plan/selections` | reseptin valinta päivän ateriaksi (varattu sprintin 4 suosikeille) |
 
 Hakuparametrit ja vastausten rakenne löytyvät [Swagger UI:sta](https://api-darkmode-aimealplanner.2.rahtiapp.fi/swagger-ui/index.html).
 

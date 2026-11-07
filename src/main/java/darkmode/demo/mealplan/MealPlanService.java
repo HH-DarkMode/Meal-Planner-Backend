@@ -16,14 +16,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
- * Tallentaa käyttäjän reseptisivulla hyväksymät reseptit päivän
- * ateriasuunnitelmaan.
+ * Ateriasuunnitelman perustoiminnot: reseptin valinta päivälle (PUT /selections),
+ * syöty-merkintä ja kalenterin haku (vain hyväksytyt). Viikkonäkymän logiikka on WeekPlanService-luokassa.
  * Valinnat tallennetaan kirjautuneen käyttäjän profiilille.
  */
 @Service
@@ -46,20 +44,6 @@ public class MealPlanService {
         this.recipeRepository = recipeRepository;
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
-    }
-
-    @Transactional(readOnly = true)
-    public Map<String, RecipeSummaryDto> getTodaysSelections(Authentication authentication) {
-        Map<String, RecipeSummaryDto> result = new LinkedHashMap<>();
-        Long profileId = currentProfileId(authentication);
-        if (profileId == null)
-            return result;
-        // Vain hyväksytyt, jotta viikkonäkymän ehdotukset eivät näy Recipes-sivulla "Added"-tilassa.
-        for (MealPlanSelection selection : selectionRepository.findByProfileIdAndPlanDateAndStatus(
-                profileId, LocalDate.now(), MealPlanStatus.ACCEPTED)) {
-            result.put(selection.getMealType(), toDto(selection.getRecipe()));
-        }
-        return result;
     }
 
     /**
@@ -92,7 +76,7 @@ public class MealPlanService {
         selection.setPlanDate(planDate);
         selection.setMealType(mealType);
         selection.setRecipe(recipe);
-        // Recipes-sivun "Add to meal plan": rivi on aina hyväksytty.
+        // PUT /selections (esim. sprintin 4 "valitse suosikki suunnitelmaan"): rivi on aina hyväksytty.
         // Jos samalla aterialla oli viikkonäkymän ehdotus, se muuttuu hyväksytyksi.
         selection.setStatus(MealPlanStatus.ACCEPTED);
         if (recipeChanged) {
@@ -100,14 +84,6 @@ public class MealPlanService {
         }
         selectionRepository.save(selection);
         return toDto(recipe);
-    }
-
-    @Transactional
-    public void clearTodaysSelections(Authentication authentication) {
-        Long profileId = currentProfileId(authentication);
-        if (profileId != null) {
-            selectionRepository.deleteByProfileIdAndPlanDate(profileId, LocalDate.now());
-        }
     }
 
     /**

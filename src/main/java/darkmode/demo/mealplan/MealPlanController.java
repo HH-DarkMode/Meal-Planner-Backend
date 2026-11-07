@@ -9,7 +9,6 @@ import darkmode.demo.dto.SetAcceptedRequest;
 import darkmode.demo.dto.SetEatenRequest;
 import darkmode.demo.dto.WeekPlanDto;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,11 +22,10 @@ import org.springframework.security.core.Authentication;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Päivän ateriasuunnitelma: reseptisivulla hyväksytyt reseptit per
- * ateriatyyppi.
+ * Ateriasuunnitelman rajapinta: viikkonäkymä, hyväksyntä, Vaihda, Accept all, syöty-merkintä
+ * ja kalenterin haku.
  * CORS tulee globaalista CorsConfig-luokasta (sama kuin RecipeController).
  */
 @RestController
@@ -42,27 +40,20 @@ public class MealPlanController {
         this.weekPlanService = weekPlanService;
     }
 
-    @GetMapping("/selections")
-    public Map<String, RecipeSummaryDto> getSelections(Authentication authentication) {
-        return mealPlanService.getTodaysSelections(authentication);
-    }
-
+    /**
+     * Valitsee reseptin päivän ateriaksi (hyväksytty). Pyynnön runko: { "mealType", "recipeId", "date" }.
+     * Ei käytössä frontendissä nyt, mutta säilytetään sprintin 4 suosikkeja varten
+     * ("valitse suosikki suunnitelmaan").
+     */
     @PutMapping("/selections")
     public RecipeSummaryDto selectMeal(@RequestBody SelectMealRequest request, Authentication authentication) {
         return mealPlanService.selectMeal(request.mealType(), request.recipeId(), request.date(), authentication);
     }
 
-    @DeleteMapping("/selections")
-    public void clearSelections(Authentication authentication) {
-        mealPlanService.clearTodaysSelections(authentication);
-    }
-
     /**
      * Palauttaa valitut ateriat aikaväliltä, esim.
      * GET /api/meal-plan/selections?from=2026-11-01&to=2026-11-30
-     * Kalenteri käyttää tätä. params = {"from","to"} erottaa tämän päivän
-     * hausta (GET /selections ilman parametreja), joka palauttaa vain tämän
-     * päivän valinnat.
+     * Kalenteri käyttää tätä. Palauttaa vain hyväksytyt ateriat.
      */
     @GetMapping(value = "/selections", params = { "from", "to" })
     public List<MealPlanEntryDto> getSelectionsInRange(

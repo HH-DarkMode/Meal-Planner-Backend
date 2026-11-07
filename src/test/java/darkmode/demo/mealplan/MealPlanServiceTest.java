@@ -43,6 +43,7 @@ class MealPlanServiceTest {
                 profileRepository);
     }
 
+    /** Ilman profiilia kalenterin haku palauttaa tyhjän listan eikä kysy tietokannasta mitään. */
     @Test
     void returnsNoSelectionsWhenUserHasNoProfile() {
         User user = new User();
@@ -50,29 +51,10 @@ class MealPlanServiceTest {
         org.mockito.Mockito.when(userRepository.findByUsername("user-a")).thenReturn(java.util.Optional.of(user));
         org.mockito.Mockito.when(profileRepository.findByUserId(null)).thenReturn(java.util.Optional.empty());
 
-        var result = service.getTodaysSelections(authentication("user-a"));
+        var result = service.getSelections(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30), authentication("user-a"));
 
         assertThat(result).isEmpty();
         org.mockito.Mockito.verifyNoInteractions(selectionRepository);
-    }
-
-    @Test
-    void loadsSelectionsUsingAuthenticatedUsersProfileId() {
-        User user = new User();
-        user.setUsername("user-a");
-        Profile profile = new Profile();
-        profile.setId(42L);
-        org.mockito.Mockito.when(userRepository.findByUsername("user-a")).thenReturn(java.util.Optional.of(user));
-        org.mockito.Mockito.when(profileRepository.findByUserId(null)).thenReturn(java.util.Optional.of(profile));
-        // Vaihe 4: tämän päivän haku palauttaa vain hyväksytyt (ACCEPTED)
-        org.mockito.Mockito.when(selectionRepository.findByProfileIdAndPlanDateAndStatus(
-                org.mockito.Mockito.eq(42L), org.mockito.Mockito.any(), org.mockito.Mockito.eq(MealPlanStatus.ACCEPTED)))
-                .thenReturn(java.util.List.of());
-
-        service.getTodaysSelections(authentication("user-a"));
-
-        org.mockito.Mockito.verify(selectionRepository).findByProfileIdAndPlanDateAndStatus(
-                org.mockito.Mockito.eq(42L), org.mockito.Mockito.any(), org.mockito.Mockito.eq(MealPlanStatus.ACCEPTED));
     }
 
     /** Liian pitkä aikaväli (yli 62 päivää) hylätään virheellä 400. */

@@ -9,12 +9,8 @@ import java.util.Optional;
 
 public interface MealPlanSelectionRepository extends JpaRepository<MealPlanSelection, Long> {
 
-    List<MealPlanSelection> findByProfileIdAndPlanDate(Long profileId, LocalDate planDate);
-
     Optional<MealPlanSelection> findByProfileIdAndPlanDateAndMealType(Long profileId, LocalDate planDate,
             String mealType);
-
-    void deleteByProfileIdAndPlanDate(Long profileId, LocalDate planDate);
 
     /**
      * Hakee profiilin kaikki valitut ateriat aikaväliltä from-to (molemmat päivät
