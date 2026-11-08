@@ -1,6 +1,5 @@
 package darkmode.demo.controller;
 
-import darkmode.demo.dto.DayPlanDto;
 import darkmode.demo.dto.RecipeDetailDto;
 import darkmode.demo.dto.RecipeSearchRequest;
 import darkmode.demo.dto.RecipeSummaryDto;
@@ -19,8 +18,8 @@ import java.util.Set;
 /**
  * Reseptirajapinta (REST). Kaikki endpointit palauttavat JSONia.
  *  - GET /api/recipes/search : ehdotuksia yhdelle ateriale
- *  - GET /api/recipes/plan   : päivän ateriaehdotukset (aamiainen, lounas, välipala, päivällinen)
  *  - GET /api/recipes/{id}   : yhden reseptin ainekset ja valmistusohjeet
+ * Viikon ateriaehdotukset tulevat rajapinnasta /api/meal-plan/week (MealPlanController).
  * Controller vain vastaanottaa parametrit ja kutsuu palvelua; varsinainen logiikka on service-kerroksessa.
  */
 @RestController
@@ -62,29 +61,6 @@ public class RecipeController {
                 diets == null ? Set.of() : diets
         );
         return recipeSearchService.search(request, size);
-    }
-
-    /**
-     * Ehdottaa koko päivän ateriat: optionsPerMeal vaihtoehtoa aamiaiselle,
-     * lounaalle, välipalalle ja päivälliselle. Päivän energia jaetaan aterioille
-     * (aamiainen 25 %, lounas 30 %, välipala 15 %, päivällinen 30 %).
-     */
-    @GetMapping("/api/recipes/plan")
-    public DayPlanDto plan(
-            @RequestParam(required = false) Double calories,
-            @RequestParam(required = false) Double protein,
-            @RequestParam(required = false) Double fat,
-            @RequestParam(required = false) Double carbs,
-            @RequestParam(defaultValue = "0.2") double tolerance,
-            @RequestParam(required = false) Set<String> diets,
-            @RequestParam(defaultValue = "5") @Min(1) @Max(50) int optionsPerMeal
-    ) {
-        // mealsPerDay = 1, koska service jakaa päivän tavoitteen itse aterioille (25/30/15/30 %).
-        RecipeSearchRequest request = new RecipeSearchRequest(
-                calories, protein, fat, carbs, 1, tolerance,
-                diets == null ? Set.of() : diets
-        );
-        return recipeSearchService.planDay(request, optionsPerMeal);
     }
 
     /** Yhden reseptin tiedot: ainekset ja valmistusohjeet vaiheittain (reseptin avaamisnäkymää varten). */

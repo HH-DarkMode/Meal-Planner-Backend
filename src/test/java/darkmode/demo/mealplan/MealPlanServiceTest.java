@@ -43,6 +43,7 @@ class MealPlanServiceTest {
                 profileRepository);
     }
 
+    /** Ilman profiilia kalenterin haku palauttaa tyhjän listan eikä kysy tietokannasta mitään. */
     @Test
     void returnsNoSelectionsWhenUserHasNoProfile() {
         User user = new User();
@@ -50,27 +51,10 @@ class MealPlanServiceTest {
         org.mockito.Mockito.when(userRepository.findByUsername("user-a")).thenReturn(java.util.Optional.of(user));
         org.mockito.Mockito.when(profileRepository.findByUserId(null)).thenReturn(java.util.Optional.empty());
 
-        var result = service.getTodaysSelections(authentication("user-a"));
+        var result = service.getSelections(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30), authentication("user-a"));
 
         assertThat(result).isEmpty();
         org.mockito.Mockito.verifyNoInteractions(selectionRepository);
-    }
-
-    @Test
-    void loadsSelectionsUsingAuthenticatedUsersProfileId() {
-        User user = new User();
-        user.setUsername("user-a");
-        Profile profile = new Profile();
-        profile.setId(42L);
-        org.mockito.Mockito.when(userRepository.findByUsername("user-a")).thenReturn(java.util.Optional.of(user));
-        org.mockito.Mockito.when(profileRepository.findByUserId(null)).thenReturn(java.util.Optional.of(profile));
-        org.mockito.Mockito.when(selectionRepository.findByProfileIdAndPlanDate(
-                org.mockito.Mockito.eq(42L), org.mockito.Mockito.any())).thenReturn(java.util.List.of());
-
-        service.getTodaysSelections(authentication("user-a"));
-
-        org.mockito.Mockito.verify(selectionRepository).findByProfileIdAndPlanDate(
-                org.mockito.Mockito.eq(42L), org.mockito.Mockito.any());
     }
 
     /** Liian pitkä aikaväli (yli 62 päivää) hylätään virheellä 400. */
@@ -103,7 +87,9 @@ class MealPlanServiceTest {
         selection.setRecipe(recipe(5));
         LocalDate from = LocalDate.of(2026, 11, 1);
         LocalDate to = LocalDate.of(2026, 11, 30);
-        when(selectionRepository.findByProfileIdAndPlanDateBetweenOrderByPlanDate(42L, from, to))
+        // Vaihe 4: kalenteri hakee vain hyväksytyt (ACCEPTED)
+        when(selectionRepository.findByProfileIdAndPlanDateBetweenAndStatusOrderByPlanDate(
+                42L, from, to, MealPlanStatus.ACCEPTED))
                 .thenReturn(List.of(selection));
 
         // teko
@@ -115,6 +101,40 @@ class MealPlanServiceTest {
         assertThat(result.get(0).mealType()).isEqualTo("Lunch");
         assertThat(result.get(0).eaten()).isTrue();
         assertThat(result.get(0).recipe().recipeId()).isEqualTo(5);
+        assertThat(result.get(0).status()).isEqualTo("ACCEPTED");
+    }
+
+    /** Vaihe 4: ehdotusta (ei hyväksytty) ei voi merkitä syödyksi: virhe 409. */
+    @Test
+    void setEatenRejectsSuggestion() {
+        givenUserWithProfile(42L);
+        LocalDate date = LocalDate.of(2026, 11, 23);
+        MealPlanSelection suggestion = new MealPlanSelection();
+        suggestion.setStatus(MealPlanStatus.SUGGESTED);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Lunch"))
+                .thenReturn(Optional.of(suggestion));
+
+        assertThatThrownBy(() -> service.setEaten(date, "Lunch", true, authentication("user-a")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        assertThat(suggestion.isEaten()).isFalse();
+    }
+
+    /** Vaihe 4: Recipes-sivun "Add to meal plan" muuttaa viikkonäkymän ehdotuksen hyväksytyksi. */
+    @Test
+    void selectMealAcceptsExistingSuggestion() {
+        givenUserWithProfile(42L);
+        when(recipeRepository.findById(5)).thenReturn(Optional.of(recipe(5)));
+        LocalDate date = LocalDate.of(2026, 11, 23);
+        MealPlanSelection suggestion = new MealPlanSelection();
+        suggestion.setRecipe(recipe(5));
+        suggestion.setStatus(MealPlanStatus.SUGGESTED);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Lunch"))
+                .thenReturn(Optional.of(suggestion));
+
+        service.selectMeal("Lunch", 5, date, authentication("user-a"));
+
+        assertThat(suggestion.getStatus()).isEqualTo(MealPlanStatus.ACCEPTED);
     }
 
     /** Täppä: aterian syöty-tila tallentuu käyttäjän omaan riviin. */
@@ -164,6 +184,52 @@ class MealPlanServiceTest {
         verify(selectionRepository).save(saved.capture());
         assertThat(saved.getValue().getPlanDate()).isEqualTo(date);
         assertThat(saved.getValue().isEaten()).isFalse();
+    }
+
+    /**
+     * Vaihe 1: Recipes-sivun "Add to meal plan" tallentaa rivin hyväksyttynä (ACCEPTED),
+     * kuten ennen status-saraketta. Varmistaa, ettei vanha toiminta muutu.
+     */
+    @Test
+    void selectMealSavesNewSelectionAsAccepted() {
+        // valmistelu: käyttäjällä on profiili, eikä päivällisellä ole vielä riviä
+        givenUserWithProfile(42L);
+        when(recipeRepository.findById(5)).thenReturn(Optional.of(recipe(5)));
+        LocalDate date = LocalDate.of(2026, 11, 25);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Dinner"))
+                .thenReturn(Optional.empty());
+
+        // teko: käyttäjä hyväksyy reseptin päivälliseksi
+        service.selectMeal("Dinner", 5, date, authentication("user-a"));
+
+        // tarkistus: tallennetun rivin tila on ACCEPTED
+        ArgumentCaptor<MealPlanSelection> saved = ArgumentCaptor.forClass(MealPlanSelection.class);
+        verify(selectionRepository).save(saved.capture());
+        assertThat(saved.getValue().getStatus()).isEqualTo(MealPlanStatus.ACCEPTED);
+    }
+
+    /** Vaihe 2: uudet ateriannimet (esim. "Morning snack") voi tallentaa suunnitelmaan. */
+    @Test
+    void selectMealAcceptsNewMealTypes() {
+        givenUserWithProfile(42L);
+        when(recipeRepository.findById(5)).thenReturn(Optional.of(recipe(5)));
+        LocalDate date = LocalDate.of(2026, 11, 25);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Morning snack"))
+                .thenReturn(Optional.empty());
+
+        service.selectMeal("Morning snack", 5, date, authentication("user-a"));
+
+        ArgumentCaptor<MealPlanSelection> saved = ArgumentCaptor.forClass(MealPlanSelection.class);
+        verify(selectionRepository).save(saved.capture());
+        assertThat(saved.getValue().getMealType()).isEqualTo("Morning snack");
+    }
+
+    /** Tuntematon ateriannimi hylätään virheellä 400 (Bad Request). */
+    @Test
+    void selectMealRejectsUnknownMealType() {
+        assertThatThrownBy(() -> service.selectMeal("Brunch", 5, LocalDate.of(2026, 11, 25), authentication("user-a")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
     /** Vanha toiminta säilyy: ilman päivää resepti tallentuu tälle päivälle. */

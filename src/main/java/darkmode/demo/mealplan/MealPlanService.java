@@ -16,19 +16,16 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 /**
- * Tallentaa käyttäjän reseptisivulla hyväksymät reseptit päivän
- * ateriasuunnitelmaan.
+ * Ateriasuunnitelman perustoiminnot: reseptin valinta päivälle (PUT /selections),
+ * syöty-merkintä ja kalenterin haku (vain hyväksytyt). Viikkonäkymän logiikka on WeekPlanService-luokassa.
  * Valinnat tallennetaan kirjautuneen käyttäjän profiilille.
  */
 @Service
 public class MealPlanService {
-
-    private static final List<String> MEAL_TYPES = List.of("Breakfast", "Lunch", "Snack", "Dinner");
 
     private final MealPlanSelectionRepository selectionRepository;
     private final RecipeRepository recipeRepository;
@@ -49,18 +46,6 @@ public class MealPlanService {
         this.profileRepository = profileRepository;
     }
 
-    @Transactional(readOnly = true)
-    public Map<String, RecipeSummaryDto> getTodaysSelections(Authentication authentication) {
-        Map<String, RecipeSummaryDto> result = new LinkedHashMap<>();
-        Long profileId = currentProfileId(authentication);
-        if (profileId == null)
-            return result;
-        for (MealPlanSelection selection : selectionRepository.findByProfileIdAndPlanDate(profileId, LocalDate.now())) {
-            result.put(selection.getMealType(), toDto(selection.getRecipe()));
-        }
-        return result;
-    }
-
     /**
      * Tallentaa reseptin annetun päivän ateriatyypille (oletus: tämä päivä).
      * Jos päivän ateriatyypille oli jo resepti, se korvataan. Jos resepti vaihtuu,
@@ -69,7 +54,8 @@ public class MealPlanService {
     @Transactional
     public RecipeSummaryDto selectMeal(String mealType, Integer recipeId, LocalDate date,
             Authentication authentication) {
-        if (!MEAL_TYPES.contains(mealType)) {
+        // Sallitut ateriat tulevat MealSlots-taulukosta (8 nimeä, esim. "Morning snack").
+        if (!MealSlots.isKnownMealType(mealType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tuntematon ateriatyyppi: " + mealType);
         }
         Recipe recipe = recipeRepository.findById(recipeId)
@@ -90,19 +76,14 @@ public class MealPlanService {
         selection.setPlanDate(planDate);
         selection.setMealType(mealType);
         selection.setRecipe(recipe);
+        // PUT /selections (esim. sprintin 4 "valitse suosikki suunnitelmaan"): rivi on aina hyväksytty.
+        // Jos samalla aterialla oli viikkonäkymän ehdotus, se muuttuu hyväksytyksi.
+        selection.setStatus(MealPlanStatus.ACCEPTED);
         if (recipeChanged) {
             selection.setEaten(false);
         }
         selectionRepository.save(selection);
         return toDto(recipe);
-    }
-
-    @Transactional
-    public void clearTodaysSelections(Authentication authentication) {
-        Long profileId = currentProfileId(authentication);
-        if (profileId != null) {
-            selectionRepository.deleteByProfileIdAndPlanDate(profileId, LocalDate.now());
-        }
     }
 
     /**
@@ -119,14 +100,33 @@ public class MealPlanService {
         MealPlanSelection selection = selectionRepository
                 .findByProfileIdAndPlanDateAndMealType(profileId, date, mealType)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ateriaa ei löydy suunnitelmasta"));
+        // Vain hyväksytyn aterian voi merkitä syödyksi (ehdotusta ei ole otettu suunnitelmaan).
+        if (selection.getStatus() != MealPlanStatus.ACCEPTED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Vain hyväksytyn aterian voi merkitä syödyksi");
+        }
         selection.setEaten(eaten);
         selectionRepository.save(selection);
     }
 
-    private Long currentProfileId(Authentication authentication) {
+    /**
+     * Kirjautuneen käyttäjän profiili (tyhjä, jos profiilia ei ole vielä tallennettu).
+     * Näkyvyys "package-private" (ei private): WeekPlanService samassa paketissa käyttää tätä.
+     */
+    Optional<Profile> currentProfile(Authentication authentication) {
         User user = userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new IllegalStateException("Authenticated user no longer exists"));
-        return profileRepository.findByUserId(user.getId()).map(Profile::getId).orElse(null);
+        return profileRepository.findByUserId(user.getId());
+    }
+
+    private Long currentProfileId(Authentication authentication) {
+        return currentProfile(authentication).map(Profile::getId).orElse(null);
+    }
+
+    /** Tietokannan rivi -> JSON-vastauksen rivi (päivä, ateria, syöty, resepti, tila). Kalenteri käyttää tätä. */
+    static MealPlanEntryDto toEntryDto(MealPlanSelection s) {
+        return new MealPlanEntryDto(s.getPlanDate(), s.getMealType(), s.isEaten(),
+                toDto(s.getRecipe()), s.getStatus().name());
     }
 
     private static RecipeSummaryDto toDto(Recipe recipe) {
@@ -160,9 +160,11 @@ public class MealPlanService {
         Long profileId = currentProfileId(authentication);
         if (profileId == null)
             return List.of();
-        return selectionRepository.findByProfileIdAndPlanDateBetweenOrderByPlanDate(profileId, from, to)
+        // Kalenteri näyttää vain hyväksytyt ateriat (ehdotukset eivät ole suunnitelmaa).
+        return selectionRepository.findByProfileIdAndPlanDateBetweenAndStatusOrderByPlanDate(
+                        profileId, from, to, MealPlanStatus.ACCEPTED)
                 .stream()
-                .map(s -> new MealPlanEntryDto(s.getPlanDate(), s.getMealType(), s.isEaten(), toDto(s.getRecipe())))
+                .map(MealPlanService::toEntryDto)
                 .toList();
     }
 

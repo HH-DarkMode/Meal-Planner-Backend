@@ -3,6 +3,8 @@ package darkmode.demo.mealplan;
 import darkmode.demo.entity.Recipe;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -15,10 +17,11 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 
 /**
- * Yksi käyttäjän reseptisivulla hyväksymä resepti tietylle päivälle ja
- * ateriatyypille
- * (Breakfast/Lunch/Snack/Dinner). Uusi hyväksyntä samalle päivälle ja
- * ateriatyypille
+ * Yksi rivi käyttäjän ateriasuunnitelmassa: tietyn päivän tietty ateria
+ * (esim. Breakfast, Lunch, Snack, Dinner) ja sille valittu resepti.
+ * Rivi on joko järjestelmän ehdotus (SUGGESTED) tai käyttäjän hyväksymä
+ * ateria (ACCEPTED), ks. MealPlanStatus.
+ * Samalle päivälle ja ateriatyypille voi olla vain yksi rivi: uusi valinta
  * korvaa edellisen (ks. MealPlanService.selectMeal).
  */
 @Entity
@@ -41,6 +44,21 @@ public class MealPlanSelection {
 
     @Column(name = "eaten", nullable = false)
     private boolean eaten;
+
+    /**
+     * Rivin tila: ehdotus (SUGGESTED) vai hyväksytty (ACCEPTED).
+     *
+     * @Enumerated(EnumType.STRING) tallentaa tietokantaan arvon nimen tekstinä
+     * ("SUGGESTED" / "ACCEPTED"). Oletus olisi järjestysnumero (0 / 1), jota on
+     * vaikea lukea kannasta ja joka menisi sekaisin, jos arvojen järjestys muuttuu.
+     *
+     * Oletusarvo ACCEPTED: kun koodi luo uuden rivin (esim. Recipes-sivun
+     * "Add to meal plan"), se on hyväksytty kuten tähänkin asti. Näin vanha
+     * toiminta ei muutu tässä vaiheessa.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private MealPlanStatus status = MealPlanStatus.ACCEPTED;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipe_id", nullable = false)
@@ -87,6 +105,14 @@ public class MealPlanSelection {
 
     public void setEaten(boolean eaten) {
         this.eaten = eaten;
+    }
+
+    public MealPlanStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(MealPlanStatus status) {
+        this.status = status;
     }
 
     public Recipe getRecipe() {

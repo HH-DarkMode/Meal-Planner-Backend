@@ -3,8 +3,8 @@ package darkmode.demo.dto;
 import java.time.LocalDate;
 
 /**
- * Yksi ateriasuunnitelman rivi kalenteria varten: päivä, ateriatyyppi,
- * syöty-tila ja resepti.
+ * Yksi ateriasuunnitelman rivi: päivä, ateriatyyppi, syöty-tila, resepti ja tila.
+ * status = "SUGGESTED" (ehdotus) tai "ACCEPTED" (hyväksytty).
  *
  * record on Javan lyhyt tapa tehdä pelkkä tietopaketti: Java luo itse kentät,
  * konstruktorin ja hakumetodit (date(), eaten() jne.). Arvoja ei voi muuttaa
@@ -15,6 +15,7 @@ public record MealPlanEntryDto(
     LocalDate date,
     String mealType,
     boolean eaten,
-    RecipeSummaryDto recipe) {
+    RecipeSummaryDto recipe,
+    String status) {
 
 }

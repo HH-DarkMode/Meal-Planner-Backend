@@ -1,9 +1,9 @@
 package darkmode.demo.service;
 
-import darkmode.demo.dto.DayPlanDto;
 import darkmode.demo.dto.RecipeSearchRequest;
 import darkmode.demo.dto.RecipeSummaryDto;
 import darkmode.demo.entity.Recipe;
+import darkmode.demo.mealplan.MealSlots.MealSlot;
 import darkmode.demo.repository.RecipeRepository;
 import org.springframework.stereotype.Service;
 
@@ -39,11 +39,7 @@ public class RecipeSearchService {
     /** Kuinka monesta parhaasta osumasta arvotaan lopulliset ehdotukset. */
     private static final int TOP_POOL_SIZE = 30;
 
-    /** Kuinka suuri osa paivan energiasta kullekin aterialle (yhteensa 100 %). */
-    private static final double BREAKFAST_SHARE = 0.25;
-    private static final double LUNCH_SHARE = 0.30;
-    private static final double SNACK_SHARE = 0.15;
-    private static final double DINNER_SHARE = 0.30;
+    // Aterioiden energiaosuudet ovat MealSlots-taulukossa (paketti mealplan).
 
     private final RecipeRepository recipeRepository;
 
@@ -57,34 +53,52 @@ public class RecipeSearchService {
     }
 
     /**
-     * Paivan ehdotukset: optionsPerMeal vaihtoehtoa aamiaiselle, lounaalle, valipalalle ja paivalliselle.
-     * Ruokavaliosopivuus (resolveDietCompatibleIds) lasketaan tassa vain kertaalleen koko paivalle,
-     * silla sama ruokavaliovalinta on sama jokaiselle aterialle - muuten sama (hidas) SQL-kysely
-     * ajettaisiin turhaan nelja kertaa per /plan-pyynto.
+     * Viikkosuunnitelma: hakee yhdelle aterialle (esim. Lunch, 30 % päivän energiasta)
+     * count kpl ERI reseptiä, yksi jokaiselle täytettävälle päivälle.
+     *
+     * @param daily             käyttäjän PÄIVÄtavoitteet profiilista
+     * @param slot              ateria MealSlots-taulukosta (nimi, osuus, reseptikategoria)
+     * @param count             montako reseptiä tarvitaan (= montako päivää täytetään)
+     * @param dietCompatibleIds resolveDietCompatibleIds-metodin tulos (null = ei rajausta)
+     * @param excludeRecipeIds  reseptit, joita EI ehdoteta (esim. viikolla jo käytetyt), jotta
+     *                          samaa lounasta ei tule joka päivä
+     * @return enintään count reseptiä. Vähemmän, jos sopivia ei ole tarpeeksi (esim. tiukka ruokavalio).
      */
-    public DayPlanDto planDay(RecipeSearchRequest daily, int optionsPerMeal) {
-        Set<Integer> dietCompatibleIds = resolveDietCompatibleIds(daily.diets());
-        return new DayPlanDto(
-                findMealOptions(daily, "Breakfast", BREAKFAST_SHARE, optionsPerMeal, dietCompatibleIds),
-                findMealOptions(daily, "Lunch", LUNCH_SHARE, optionsPerMeal, dietCompatibleIds),
-                findMealOptions(daily, "Snack", SNACK_SHARE, optionsPerMeal, dietCompatibleIds),
-                findMealOptions(daily, "Dinner", DINNER_SHARE, optionsPerMeal, dietCompatibleIds)
-        );
+    public List<Recipe> findRecipesForMeal(RecipeSearchRequest daily, MealSlot slot, int count,
+                                           Set<Integer> dietCompatibleIds, Set<Integer> excludeRecipeIds) {
+        return findMatchingRecipes(scaleToMeal(daily, slot.share()), slot.recipeCategory(), count,
+                dietCompatibleIds, excludeRecipeIds);
     }
 
-    /** Skaalaa paivatavoitteen yhden aterian osuuteen ja hakee sen ateriatyypin reseptit. */
-    private List<RecipeSummaryDto> findMealOptions(RecipeSearchRequest daily, String category,
-                                                   double share, int count, Set<Integer> dietCompatibleIds) {
-        RecipeSearchRequest meal = new RecipeSearchRequest(
+    /**
+     * Onko käyttäjällä ruokavalio, joka tarkistetaan ainesosista (vegetarian, vegan, gluten-free, dairy-free)?
+     * Silloin tuntemattomista ainesosista varoitetaan. high-protein ja low-carb tarkistetaan makroista,
+     * joten niistä ei tule varoitusta. Nopea: ei tietokantakyselyä.
+     */
+    public static boolean hasIngredientBasedDiet(Set<String> diets) {
+        return diets.stream().anyMatch(DIET_TO_SPECDIET_CODE::containsKey);
+    }
+
+    /** Skaalaa päivätavoitteet yhden aterian osuuteen (esim. 2000 kcal * 0.30 = 600 kcal). */
+    private static RecipeSearchRequest scaleToMeal(RecipeSearchRequest daily, double share) {
+        return new RecipeSearchRequest(
                 scale(daily.calories(), share), scale(daily.protein(), share),
                 scale(daily.fat(), share), scale(daily.carbs(), share),
-                1, daily.tolerance(), daily.diets()
-        );
-        return findSuggestions(meal, category, count, dietCompatibleIds);
+                1, daily.tolerance(), daily.diets());
     }
 
     private static Double scale(Double value, double share) {
         return value == null ? null : value * share;
+    }
+
+    /** /api/recipes/search -haku: varsinainen haku tehdään findMatchingRecipes-metodissa. */
+    private List<RecipeSummaryDto> findSuggestions(RecipeSearchRequest request, String category, int count,
+                                                    Set<Integer> dietCompatibleIds) {
+        // Varoitus näytetään vain, jos ruokavaliosuodatin oli käytössä.
+        boolean dietFilterActive = dietCompatibleIds != null;
+        return findMatchingRecipes(request, category, count, dietCompatibleIds, Set.of()).stream()
+                .map(r -> toSummary(r, dietFilterActive))
+                .toList();
     }
 
     /**
@@ -92,11 +106,13 @@ public class RecipeSearchService {
      * 1. Kalorit rajaavat (tietokannassa), makrot eivat rajaa.
      * 2. Erikoisruokavaliot karsivat reseptit, jotka eivat sovi (tuntemattomat
      *    ainesosat sallitaan, mutta niista tulee varoitus tulokseen).
+     * 2b. Reseptit excludeRecipeIds-joukosta jätetään pois (viikolla jo käytetyt).
      * 3. Jarjestetaan makrojen mukaan: lahinna tavoitesuhdetta ensin.
      * 4. Parhaiden joukosta arvotaan count kpl, jotta ehdotukset vaihtelevat.
+     *    Arvonta palauttaa aina ERI reseptit, joten 7 lounasta = 7 eri reseptiä.
      */
-    private List<RecipeSummaryDto> findSuggestions(RecipeSearchRequest request, String category, int count,
-                                                    Set<Integer> dietCompatibleIds) {
+    private List<Recipe> findMatchingRecipes(RecipeSearchRequest request, String category, int count,
+                                             Set<Integer> dietCompatibleIds, Set<Integer> excludeRecipeIds) {
         // 1. Kaloriväli per ateria: päivätavoite / aterioiden määrä, plusmiinus toleranssi.
         //    null tarkoittaa "ei rajoitusta" (jos tavoitetta ei annettu).
         Double minCalories = null;
@@ -116,10 +132,17 @@ public class RecipeSearchService {
 
         // 2. Erikoisruokavaliot: pidetään vain reseptit, joiden id on sopivien joukossa.
         //    null = yhtään ruokavaliorajausta ei pyydetty, jolloin kaikki reseptit kelpaavat.
-        //    (dietCompatibleIds lasketaan kutsujan toimesta kertaalleen, ks. search()/planDay())
+        //    (dietCompatibleIds lasketaan kutsujan toimesta kertaalleen, ks. search() ja WeekPlanService)
         if (dietCompatibleIds != null) {
             recipes = recipes.stream()
                     .filter(r -> dietCompatibleIds.contains(r.getRecipeId()))
+                    .toList();
+        }
+
+        // 2b. Pois jo käytetyt reseptit, jotta sama resepti ei toistu viikolla.
+        if (!excludeRecipeIds.isEmpty()) {
+            recipes = recipes.stream()
+                    .filter(r -> !excludeRecipeIds.contains(r.getRecipeId()))
                     .toList();
         }
 
@@ -133,9 +156,7 @@ public class RecipeSearchService {
         // 4. Arvonta: sama haku antaa joka kerta hieman eri ehdotuksia.
         Collections.shuffle(topPool);
 
-        // Varoitus näytetään vain, jos ruokavaliosuodatin oli käytössä.
-        boolean dietFilterActive = dietCompatibleIds != null;
-        return topPool.stream().limit(count).map(r -> toDto(r, dietFilterActive)).toList();
+        return topPool.stream().limit(count).toList();
     }
 
     /**
@@ -167,8 +188,11 @@ public class RecipeSearchService {
      * specdiet-pohjaisiin ruokavalioihin (vegaani, gluteeniton, ...) leikkaamalla
      * joukot. Palauttaa null jos yhtaan specdiet-pohjaista ruokavaliota ei
      * pyydetty (= ei rajoitusta).
+     *
+     * public (vaihe 3): viikkosuunnitelma laskee tämän KERRAN koko viikolle, koska
+     * kysely on hidas (n. 0,7 s / ruokavalio). Muuten se ajettaisiin jokaiselle aterialle erikseen.
      */
-    private Set<Integer> resolveDietCompatibleIds(Set<String> diets) {
+    public Set<Integer> resolveDietCompatibleIds(Set<String> diets) {
         Set<Integer> result = null;
         for (String dietId : diets) {
             String code = DIET_TO_SPECDIET_CODE.get(dietId);
@@ -185,7 +209,11 @@ public class RecipeSearchService {
         return result;
     }
 
-    private RecipeSummaryDto toDto(Recipe r, boolean dietFilterActive) {
+    /**
+     * Resepti -> JSON-vastauksen resepti, mukana tuntemattomat ainesosat ja diet-varoitus.
+     * Oli ennen private (toDto). Nyt public, jotta viikkonäkymä näyttää saman varoituksen kuin Recipes-sivu.
+     */
+    public RecipeSummaryDto toSummary(Recipe r, boolean dietFilterActive) {
         // Yksi lisäkysely per palautettava resepti (enintään size kpl), joten nopeus riittää.
         List<String> unmatched = recipeRepository.findUnmatchedIngredientNames(r.getRecipeId());
         return new RecipeSummaryDto(

@@ -307,14 +307,9 @@ Avaa selaimessa <http://localhost:5173>.
 ### 6.3 Tarkista, että kokonaisuus toimii
 
 1. Avaa **Profile**-sivu, täytä tiedot ja tallenna.
-2. Avaa **Recipes**-sivu. Siinä pitäisi näkyä reseptiehdotukset aamiaiselle, lounaalle, välipalalle ja
-   päivälliselle.
-3. Valitse resepti napilla **Add to meal plan** ja tarkista, että se näkyy **Meal plan** -sivulla.
-
-**Valintojen tyhjentäminen:** kun kaikki päivän ateriat on valittu, Recipes-sivu näyttää vain
-"All meals chosen for today!". Valinnat tyhjennetään Swaggerissa: valitse
-`DELETE /api/meal-plan/selections`, paina *Try it out* ja sitten *Execute*, ja lataa Recipes-sivu uudelleen.
-Valinnat nollautuvat myös itsestään päivän vaihtuessa.
+2. Avaa **Meal plan** -sivu. Viikkonäkymässä pitäisi näkyä ateriaehdotukset tälle päivälle
+   ja loppuviikolle (oletuksena aamiainen, lounas, päivällinen ja iltapala).
+3. Hyväksy ateria napilla **Add** ja tarkista, että se näkyy **Calendar**-sivulla.
 
 ---
 
