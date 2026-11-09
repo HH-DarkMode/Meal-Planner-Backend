@@ -38,7 +38,7 @@ Data on koottu etukäteen Python-skripteillä yhdeksi PostgreSQL-dumpiksi. Ajon 
 
 ## Tietokanta (ER-kaavio)
 
-Sovelluksen omat taulut ovat `users`, `profiles`, `profile_diets` ja `meal_plan_selections`. Reseptit, ainesosat ja Fineli-vastaavuudet tulevat valmiista dumpista. `recipes`-taulusta on jätetty pois Zenodon ja Finelin raaka-arvot (`src_*`, `calc_*`), joista annoskohtaiset ravintoarvot on laskettu.
+Sovelluksen omat taulut ovat `users`, `profiles`, `profile_diets` ja `meal_plan_selections`. Reseptit, ainesosat, Finelin elintarvikkeet (`foods`, `food_*`, `specdiets`) ja ainesosien Fineli-vastaavuudet tulevat valmiista dumpista. `recipes`-taulusta on jätetty pois Zenodon ja Finelin raaka-arvot (`src_*`, `calc_*`), joista annoskohtaiset ravintoarvot on laskettu.
 
 ```mermaid
 erDiagram
@@ -48,7 +48,12 @@ erDiagram
     recipes ||--o{ meal_plan_selections : "valittu ateriaksi"
     recipes ||--|{ recipe_ingredients : "ainesosat"
     recipe_ingredients }o--o| ingredient_matches : "nimen perusteella"
-    ingredient_matches }o--o{ food_specdiets : "foodid (Fineli)"
+    recipe_ingredients }o--o| foods : "elintarvike"
+    ingredient_matches }o--o| foods : "vastaavuus"
+    foods ||--o{ food_names : "nimet"
+    foods ||--o{ food_units : "mittayksiköt"
+    foods ||--o{ food_specdiets : "ruokavaliot"
+    specdiets ||--o{ food_specdiets : "luokitus"
 
     users {
         bigint id PK
@@ -101,24 +106,62 @@ erDiagram
     }
     recipe_ingredients {
         bigint id PK
-        int recipe_id FK
+        int recipe_id FK "UK yhdessä line_no"
         int line_no
         text raw_text
         text ingredient_name_clean
         text quantity
         text unit_orig
+        numeric quantity_metric
+        varchar unit_metric
+        int foodid FK
+        numeric grams
+        double energia_kj
+        double proteiini
+        double hiilihydraatti
+        double rasva
     }
     ingredient_matches {
-        text ingredient_name
-        int foodid
+        text ingredient_name PK
+        int foodid FK
+        int occurrence_count
+        varchar method
+        text note
+    }
+    foods {
+        int foodid PK
+        double energia_kj
+        double energia_kcal
+        double proteiini
+        double hiilihydraatti
+        double rasva
+    }
+    food_names {
+        bigint id PK
+        int foodid FK "UK yhdessä lang"
+        varchar lang
+        text name
+    }
+    food_units {
+        bigint id PK
+        int foodid FK "UK yhdessä unit_code"
+        varchar unit_code
+        text unit_name_en
+        numeric mass_g
     }
     food_specdiets {
-        int foodid
-        varchar code
+        bigint id PK
+        int foodid FK "UK yhdessä code"
+        varchar code FK
+    }
+    specdiets {
+        varchar code PK
+        text description_fi
+        text description_en
     }
 ```
 
-`meal_plan_selections.profile_id` viittaa profiiliin, vaikka kannassa ei ole sille vierasavainta. `recipe_ingredients` yhdistyy `ingredient_matches`-tauluun ainesosan nimellä (`ingredient_name_clean` = `ingredient_name`).
+`meal_plan_selections.profile_id` viittaa profiiliin, vaikka kannassa ei ole sille vierasavainta. Ruokavaliohaku yhdistää `recipe_ingredients`-taulun `ingredient_matches`-tauluun ainesosan nimellä (`ingredient_name_clean` = `ingredient_name`), ei vierasavaimella.
 
 ## REST API
 
