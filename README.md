@@ -36,6 +36,90 @@ Data on koottu etukäteen Python-skripteillä yhdeksi PostgreSQL-dumpiksi. Ajon 
 * Reseptien englanninkieliset ainesosat on yhdistetty Finelin elintarvikkeisiin kolmella tavalla: yleisimmille noin 250 ainesosalle tekoälyllä (Claude Sonnet) laaditulla vastaavuuslistalla, muille tarkalla ja sumealla nimivertailulla. Noin 71 % ainesosamaininnoista on tunnistettu.
 * Reseptin ravintoarvoina käytetään ensisijaisesti Allrecipesin omaa arviota. Jos se puuttuu, käytetään Finelin perusteella laskettua arvoa, mutta vain jos vähintään 80 % ainesosariveistä on tunnistettu.
 
+## Tietokanta (ER-kaavio)
+
+Sovelluksen omat taulut ovat `users`, `profiles`, `profile_diets` ja `meal_plan_selections`. Reseptit, ainesosat ja Fineli-vastaavuudet tulevat valmiista dumpista. `recipes`-taulusta on jätetty pois Zenodon ja Finelin raaka-arvot (`src_*`, `calc_*`), joista annoskohtaiset ravintoarvot on laskettu.
+
+```mermaid
+erDiagram
+    users ||--o| profiles : "omistaa"
+    profiles ||--o{ profile_diets : "ruokavaliot"
+    profiles ||--o{ meal_plan_selections : "suunnitelma"
+    recipes ||--o{ meal_plan_selections : "valittu ateriaksi"
+    recipes ||--|{ recipe_ingredients : "ainesosat"
+    recipe_ingredients }o--o| ingredient_matches : "nimen perusteella"
+    ingredient_matches }o--o{ food_specdiets : "foodid (Fineli)"
+
+    users {
+        bigint id PK
+        varchar username UK
+        varchar password_hash
+    }
+    profiles {
+        bigint id PK
+        bigint user_id FK,UK
+        varchar username
+        int weight
+        int height
+        int meals_per_day
+        varchar gender
+        varchar goal
+        int calories
+        int protein
+        int fat
+        int carbs
+    }
+    profile_diets {
+        bigint profile_id FK
+        varchar diets
+    }
+    meal_plan_selections {
+        bigint id PK
+        bigint profile_id "UK yhdessä plan_date + meal_type"
+        date plan_date
+        varchar meal_type
+        int recipe_id FK
+        boolean eaten
+        varchar status "SUGGESTED / ACCEPTED"
+    }
+    recipes {
+        int recipe_id PK
+        text name
+        text category
+        text cuisine
+        numeric servings
+        text instructions
+        int prep_time_min
+        int cook_time_min
+        double kcal_per_serving
+        double protein_per_serving
+        double fat_per_serving
+        double carbs_per_serving
+        varchar nutrition_source "source / fineli"
+        int matched_lines
+        int total_lines
+    }
+    recipe_ingredients {
+        bigint id PK
+        int recipe_id FK
+        int line_no
+        text raw_text
+        text ingredient_name_clean
+        text quantity
+        text unit_orig
+    }
+    ingredient_matches {
+        text ingredient_name
+        int foodid
+    }
+    food_specdiets {
+        int foodid
+        varchar code
+    }
+```
+
+`meal_plan_selections.profile_id` viittaa profiiliin, vaikka kannassa ei ole sille vierasavainta. `recipe_ingredients` yhdistyy `ingredient_matches`-tauluun ainesosan nimellä (`ingredient_name_clean` = `ingredient_name`).
+
 ## REST API
 
 Rekisteröidy tai kirjaudu sisään endpointissa `POST /api/auth/register` tai
@@ -54,23 +138,7 @@ Lähetä token kirjautumisen jälkeisissä API-kutsuissa otsakkeessa
 joten nykyinen evästepohjainen käyttö säilyy. Kirjaudu ulos poistamalla token
 frontendin tallennuksesta ja kutsumalla halutessasi `POST /api/auth/logout`.
 
-| Endpoint | Kuvaus |
-|---|---|
-| `POST /api/auth/register`, `POST /api/auth/login` | rekisteröityminen ja kirjautuminen; vastaus sisältää JWT-tokenin |
-| `GET /api/auth/me` | kirjautuneen käyttäjän tiedot |
-| `GET /api/recipes/search` | reseptiehdotuksia yhdelle aterialle |
-| `GET /api/recipes/{id}` | yhden reseptin ainesosat ja valmistusohjeet |
-| `GET /api/profile`, `PUT /api/profile` | käyttäjän profiilin haku ja tallennus |
-| `GET /api/meal-plan/week?start=&today=` | viikkosuunnitelma; luo puuttuvat ehdotukset |
-| `PATCH /api/meal-plan/selections/status` | aterian hyväksyntä tai sen peruminen |
-| `POST /api/meal-plan/selections/reroll` | uusi ehdotus yhteen ateriaan |
-| `POST /api/meal-plan/day/accept` | päivän kaikkien ehdotusten hyväksyntä |
-| `PATCH /api/meal-plan/selections/eaten` | syöty-merkintä |
-| `GET /api/meal-plan/selections?from=&to=` | hyväksytyt ateriat aikaväliltä (kalenteri) |
-| `GET /api/meal-plan/meal-types` | käyttäjän päivän ateriat järjestyksessä |
-| `PUT /api/meal-plan/selections` | reseptin valinta päivän ateriaksi (varattu sprintin 4 suosikeille) |
-
-Hakuparametrit ja vastausten rakenne löytyvät [Swagger UI:sta](https://api-darkmode-aimealplanner.2.rahtiapp.fi/swagger-ui/index.html).
+Kaikki endpointit, hakuparametrit ja vastausten rakenne löytyvät [Swagger UI:sta](https://api-darkmode-aimealplanner.2.rahtiapp.fi/swagger-ui/index.html). Paikallisesti Swagger on osoitteessa <http://localhost:8080/swagger-ui/index.html>.
 
 ## Testit
 
