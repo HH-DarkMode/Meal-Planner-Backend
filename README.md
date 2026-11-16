@@ -260,3 +260,10 @@ Sprint 2 on valmis ([release](https://github.com/HH-DarkMode/Meal-Planner-Backen
 * **[Backend](https://api-darkmode-aimealplanner.2.rahtiapp.fi/)**
 
 * **[Swagger UI](https://api-darkmode-aimealplanner.2.rahtiapp.fi/swagger-ui/index.html)**
+
+
+## Lisenssi
+
+Tämä projekti on lisensoitu GNU General Public License v3.0 -lisenssillä.
+
+Lisätietoja lisenssin ehdoista löytyy [LICENSE](LICENSE)-tiedostosta.
