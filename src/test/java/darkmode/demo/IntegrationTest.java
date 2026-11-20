@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.List;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -137,6 +138,17 @@ class IntegrationTest {
     @Test
     void meEndpointRejectsRequestsWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /** Suosikit ovat henkilökohtaisia: ilman kirjautumista kaikki kolme kutsua palauttavat 401. */
+    @Test
+    void favoritesEndpointsRejectRequestsWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/favorites"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(put("/api/favorites/5"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/favorites/5"))
                 .andExpect(status().isUnauthorized());
     }
 
