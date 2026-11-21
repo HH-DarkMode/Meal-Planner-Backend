@@ -42,8 +42,8 @@ public class MealPlanController {
 
     /**
      * Valitsee reseptin päivän ateriaksi (hyväksytty). Pyynnön runko: { "mealType", "recipeId", "date" }.
-     * Ei käytössä frontendissä nyt, mutta säilytetään sprintin 4 suosikkeja varten
-     * ("valitse suosikki suunnitelmaan").
+     * Käytössä Meal plan -sivun ♥▾-valinnassa (suosikki aterian paikalle).
+     * Syödyn aterian reseptiä ei voi vaihtaa (409).
      */
     @PutMapping("/selections")
     public RecipeSummaryDto selectMeal(@RequestBody SelectMealRequest request, Authentication authentication) {
@@ -110,7 +110,7 @@ public class MealPlanController {
         weekPlanService.acceptDay(request.date(), authentication);
     }
 
-    /** Käyttäjän ateriat järjestyksessä (kalenteri, vaihe 7): GET /api/meal-plan/meal-types */
+    /** Käyttäjän ateriat järjestyksessä (kalenteri): GET /api/meal-plan/meal-types */
     @GetMapping("/meal-types")
     public List<String> mealTypes(Authentication authentication) {
         return weekPlanService.mealTypes(authentication);

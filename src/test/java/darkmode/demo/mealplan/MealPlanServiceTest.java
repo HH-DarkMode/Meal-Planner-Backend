@@ -89,7 +89,7 @@ class MealPlanServiceTest {
         selection.setRecipe(recipe(5));
         LocalDate from = LocalDate.of(2026, 11, 1);
         LocalDate to = LocalDate.of(2026, 11, 30);
-        // Vaihe 4: kalenteri hakee vain hyväksytyt (ACCEPTED)
+        // Kalenteri hakee vain hyväksytyt (ACCEPTED)
         when(selectionRepository.findByProfileIdAndPlanDateBetweenAndStatusOrderByPlanDate(
                 42L, from, to, MealPlanStatus.ACCEPTED))
                 .thenReturn(List.of(selection));
@@ -106,7 +106,7 @@ class MealPlanServiceTest {
         assertThat(result.get(0).status()).isEqualTo("ACCEPTED");
     }
 
-    /** Vaihe 4: ehdotusta (ei hyväksytty) ei voi merkitä syödyksi: virhe 409. */
+    /** Ehdotusta (ei hyväksytty) ei voi merkitä syödyksi: virhe 409. */
     @Test
     void setEatenRejectsSuggestion() {
         givenUserWithProfile(42L);
@@ -122,7 +122,7 @@ class MealPlanServiceTest {
         assertThat(suggestion.isEaten()).isFalse();
     }
 
-    /** Vaihe 4: Recipes-sivun "Add to meal plan" muuttaa viikkonäkymän ehdotuksen hyväksytyksi. */
+    /** PUT /selections muuttaa viikkonäkymän ehdotuksen hyväksytyksi. */
     @Test
     void selectMealAcceptsExistingSuggestion() {
         givenUserWithProfile(42L);
@@ -189,8 +189,7 @@ class MealPlanServiceTest {
     }
 
     /**
-     * Vaihe 1: Recipes-sivun "Add to meal plan" tallentaa rivin hyväksyttynä (ACCEPTED),
-     * kuten ennen status-saraketta. Varmistaa, ettei vanha toiminta muutu.
+     * PUT /selections tallentaa uuden rivin hyväksyttynä (ACCEPTED).
      */
     @Test
     void selectMealSavesNewSelectionAsAccepted() {
@@ -210,7 +209,7 @@ class MealPlanServiceTest {
         assertThat(saved.getValue().getStatus()).isEqualTo(MealPlanStatus.ACCEPTED);
     }
 
-    /** Vaihe 2: uudet ateriannimet (esim. "Morning snack") voi tallentaa suunnitelmaan. */
+    /** Uudet ateriannimet (esim. "Morning snack") voi tallentaa suunnitelmaan. */
     @Test
     void selectMealAcceptsNewMealTypes() {
         givenUserWithProfile(42L);

@@ -82,7 +82,7 @@ public class MealPlanService {
         selection.setPlanDate(planDate);
         selection.setMealType(mealType);
         selection.setRecipe(recipe);
-        // PUT /selections (esim. sprintin 4 "valitse suosikki suunnitelmaan"): rivi on aina hyväksytty.
+        // PUT /selections (esim. suosikin valinta suunnitelmaan): rivi on aina hyväksytty.
         // Jos samalla aterialla oli viikkonäkymän ehdotus, se muuttuu hyväksytyksi.
         selection.setStatus(MealPlanStatus.ACCEPTED);
         selectionRepository.save(selection);

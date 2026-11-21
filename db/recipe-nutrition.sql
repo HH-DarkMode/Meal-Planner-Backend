@@ -5,7 +5,7 @@
 --   2. 'fineli': muuten meidän Fineli-datasta laskema arvo, mutta vain jos vähintään 80 %
 --      ainesosariveistä on mukana laskennassa. Alle sen laskettu arvo jäisi liian pieneksi.
 --   3. Muuten arvot jäävät tyhjiksi (NULL), eikä resepti tule ravintoarvohaun tuloksiin.
--- Tiedosto voi ajaa uudelleen turvallisesti (nollaa ensin arvot).
+-- Tiedoston voi ajaa uudelleen turvallisesti (nollaa ensin arvot).
 --   psql -U mealplanner -d mealplanner -h localhost -f db/recipe-nutrition.sql
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS kcal_per_serving    DOUBLE PRECISION;
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS protein_per_serving DOUBLE PRECISION;
