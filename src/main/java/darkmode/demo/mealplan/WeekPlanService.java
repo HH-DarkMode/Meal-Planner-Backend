@@ -184,7 +184,7 @@ public class WeekPlanService {
         return toEntryWithWarning(selectionRepository.save(row), dietFilterActive);
     }
 
-    /** Käyttäjän päivän ateriat järjestyksessä (kalenteri tarvitsee nämä vaiheessa 7). */
+    /** Käyttäjän päivän ateriat järjestyksessä (kalenteri tarvitsee nämä). */
     @Transactional(readOnly = true)
     public List<String> mealTypes(Authentication authentication) {
         Integer mealsPerDay = mealPlanService.currentProfile(authentication).map(Profile::getMealsPerDay).orElse(null);
@@ -223,7 +223,7 @@ public class WeekPlanService {
 
     // ---- apumetodit ----
 
-    /** Tietokannan rivi -> JSON-rivi diet-varoituksen kanssa (sama sääntö kuin Recipes-sivulla). */
+    /** Tietokannan rivi -> JSON-rivi diet-varoituksen kanssa (sama sääntö kuin reseptihaussa). */
     private MealPlanEntryDto toEntryWithWarning(MealPlanSelection s, boolean dietFilterActive) {
         return new MealPlanEntryDto(s.getPlanDate(), s.getMealType(), s.isEaten(),
                 recipeSearchService.toSummary(s.getRecipe(), dietFilterActive), s.getStatus().name());

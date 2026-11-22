@@ -48,8 +48,8 @@ public class MealPlanService {
 
     /**
      * Tallentaa reseptin annetun päivän ateriatyypille (oletus: tämä päivä).
-     * Jos päivän ateriatyypille oli jo resepti, se korvataan. Jos resepti vaihtuu,
-     * syöty-merkintä nollataan, koska uutta reseptiä ei ole vielä syöty.
+     * Jos päivän ateriatyypille oli jo resepti, se korvataan.
+     * Syödyn aterian reseptiä ei voi vaihtaa (virhe 409).
      */
     @Transactional
     public RecipeSummaryDto selectMeal(String mealType, Integer recipeId, LocalDate date,
@@ -69,19 +69,22 @@ public class MealPlanService {
         MealPlanSelection selection = selectionRepository
                 .findByProfileIdAndPlanDateAndMealType(profileId, planDate, mealType)
                 .orElseGet(MealPlanSelection::new);
-        // Jos päivän aterian resepti vaihtuu, uutta reseptiä ei ole vielä syöty.
         boolean recipeChanged = selection.getRecipe() == null
                 || !recipeId.equals(selection.getRecipe().getRecipeId());
+        // Syödyn aterian reseptiä ei voi vaihtaa: kalenterissa pitää säilyä se, mitä oikeasti syötiin.
+        // Sama sääntö kuin hyväksynnän perumisessa (syöty ateria pysyy suunnitelmassa).
+        // Saman reseptin valinta uudelleen on sallittu, koska se ei muuta mitään.
+        if (selection.isEaten() && recipeChanged) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Syödyn aterian reseptiä ei voi vaihtaa. Poista ensin syöty-merkintä.");
+        }
         selection.setProfileId(profileId);
         selection.setPlanDate(planDate);
         selection.setMealType(mealType);
         selection.setRecipe(recipe);
-        // PUT /selections (esim. sprintin 4 "valitse suosikki suunnitelmaan"): rivi on aina hyväksytty.
+        // PUT /selections (esim. suosikin valinta suunnitelmaan): rivi on aina hyväksytty.
         // Jos samalla aterialla oli viikkonäkymän ehdotus, se muuttuu hyväksytyksi.
         selection.setStatus(MealPlanStatus.ACCEPTED);
-        if (recipeChanged) {
-            selection.setEaten(false);
-        }
         selectionRepository.save(selection);
         return toDto(recipe);
     }

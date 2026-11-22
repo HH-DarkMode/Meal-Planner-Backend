@@ -1,5 +1,5 @@
 -- Profiilitaulut (Profile-entiteetti, paketti darkmode.demo.profile).
--- Sovellus kayttaa ddl-auto=validate, joten taulut pitaa luoda tasta tiedostosta:
+-- Sovellus käyttää ddl-auto=validate, joten taulut pitää luoda tästä tiedostosta:
 --   psql -U mealplanner -d mealplanner -h localhost -f db/profile-schema.sql
 CREATE TABLE IF NOT EXISTS profiles (
     id        BIGSERIAL PRIMARY KEY,
@@ -23,13 +23,13 @@ CREATE TABLE IF NOT EXISTS profile_diets (
 -- Vanhoille kannoille, joissa profiles-taulu on jo olemassa ilman meals_per_day-saraketta:
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS meals_per_day INTEGER;
 
--- Kayttajat (User-entiteetti, paketti darkmode.demo.auth). Luotava ennen profiles.user_id-saraketta,
--- koska sarake viittaa tahan tauluun.
+-- Käyttäjät (User-entiteetti, paketti darkmode.demo.auth). Luotava ennen profiles.user_id-saraketta,
+-- koska sarake viittaa tähän tauluun.
 CREATE TABLE IF NOT EXISTS users (
     id             BIGSERIAL PRIMARY KEY,
     username       VARCHAR(255) UNIQUE,
     password_hash  VARCHAR(255)
 );
 
--- Profiilin omistaja (Profile.user, @OneToOne). Vanhoille profiileille jaa tyhjaksi.
+-- Profiilin omistaja (Profile.user, @OneToOne). Vanhoille profiileille jää tyhjäksi.
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS user_id BIGINT UNIQUE REFERENCES users(id);

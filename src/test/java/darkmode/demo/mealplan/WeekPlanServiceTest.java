@@ -32,7 +32,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Vaihe 4: viikkosuunnitelman säännöt (WeekPlanService). */
+/** Viikkosuunnitelman säännöt (WeekPlanService). */
 class WeekPlanServiceTest {
 
     private static final LocalDate MONDAY = LocalDate.of(2026, 11, 9);

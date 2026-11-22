@@ -19,6 +19,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,7 +89,7 @@ class MealPlanServiceTest {
         selection.setRecipe(recipe(5));
         LocalDate from = LocalDate.of(2026, 11, 1);
         LocalDate to = LocalDate.of(2026, 11, 30);
-        // Vaihe 4: kalenteri hakee vain hyväksytyt (ACCEPTED)
+        // Kalenteri hakee vain hyväksytyt (ACCEPTED)
         when(selectionRepository.findByProfileIdAndPlanDateBetweenAndStatusOrderByPlanDate(
                 42L, from, to, MealPlanStatus.ACCEPTED))
                 .thenReturn(List.of(selection));
@@ -104,7 +106,7 @@ class MealPlanServiceTest {
         assertThat(result.get(0).status()).isEqualTo("ACCEPTED");
     }
 
-    /** Vaihe 4: ehdotusta (ei hyväksytty) ei voi merkitä syödyksi: virhe 409. */
+    /** Ehdotusta (ei hyväksytty) ei voi merkitä syödyksi: virhe 409. */
     @Test
     void setEatenRejectsSuggestion() {
         givenUserWithProfile(42L);
@@ -120,7 +122,7 @@ class MealPlanServiceTest {
         assertThat(suggestion.isEaten()).isFalse();
     }
 
-    /** Vaihe 4: Recipes-sivun "Add to meal plan" muuttaa viikkonäkymän ehdotuksen hyväksytyksi. */
+    /** PUT /selections muuttaa viikkonäkymän ehdotuksen hyväksytyksi. */
     @Test
     void selectMealAcceptsExistingSuggestion() {
         givenUserWithProfile(42L);
@@ -187,8 +189,7 @@ class MealPlanServiceTest {
     }
 
     /**
-     * Vaihe 1: Recipes-sivun "Add to meal plan" tallentaa rivin hyväksyttynä (ACCEPTED),
-     * kuten ennen status-saraketta. Varmistaa, ettei vanha toiminta muutu.
+     * PUT /selections tallentaa uuden rivin hyväksyttynä (ACCEPTED).
      */
     @Test
     void selectMealSavesNewSelectionAsAccepted() {
@@ -208,7 +209,7 @@ class MealPlanServiceTest {
         assertThat(saved.getValue().getStatus()).isEqualTo(MealPlanStatus.ACCEPTED);
     }
 
-    /** Vaihe 2: uudet ateriannimet (esim. "Morning snack") voi tallentaa suunnitelmaan. */
+    /** Uudet ateriannimet (esim. "Morning snack") voi tallentaa suunnitelmaan. */
     @Test
     void selectMealAcceptsNewMealTypes() {
         givenUserWithProfile(42L);
@@ -248,24 +249,48 @@ class MealPlanServiceTest {
         assertThat(saved.getValue().getPlanDate()).isEqualTo(LocalDate.now());
     }
 
-    /** Kun päivän ateriaksi valitaan toinen resepti, syöty-merkintä nollautuu (uutta ei ole syöty). */
+    /** Syödyn aterian reseptiä ei voi vaihtaa: virhe 409, eikä riviä muuteta. */
     @Test
-    void changingRecipeResetsEatenFlag() {
-        // valmistelu: päivällä on jo syöty lounas, resepti 1
+    void selectMealRejectsChangingEatenMeal() {
+        // valmistelu: lounas (resepti 1) on jo syöty
         givenUserWithProfile(42L);
         when(recipeRepository.findById(2)).thenReturn(Optional.of(recipe(2)));
         LocalDate date = LocalDate.of(2026, 11, 23);
-        MealPlanSelection existing = new MealPlanSelection();
-        existing.setRecipe(recipe(1));
-        existing.setEaten(true);
+        MealPlanSelection eaten = new MealPlanSelection();
+        eaten.setRecipe(recipe(1));
+        eaten.setEaten(true);
         when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Lunch"))
-                .thenReturn(Optional.of(existing));
+                .thenReturn(Optional.of(eaten));
 
-        // teko: lounaaksi valitaan resepti 2
+        // teko ja tarkistus: lounaaksi yritetään vaihtaa resepti 2
+        assertThatThrownBy(() -> service.selectMeal("Lunch", 2, date, authentication("user-a")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        // rivi pysyi ennallaan: sama resepti ja yhä syöty, eikä mitään tallennettu
+        assertThat(eaten.getRecipe().getRecipeId()).isEqualTo(1);
+        assertThat(eaten.isEaten()).isTrue();
+        verify(selectionRepository, never()).save(any());
+    }
+
+    /** Syömättömän aterian reseptin voi vaihtaa (esim. suosikki ehdotuksen tilalle). */
+    @Test
+    void selectMealReplacesRecipeOfUneatenMeal() {
+        givenUserWithProfile(42L);
+        when(recipeRepository.findById(2)).thenReturn(Optional.of(recipe(2)));
+        LocalDate date = LocalDate.of(2026, 11, 23);
+        MealPlanSelection planned = new MealPlanSelection();
+        planned.setRecipe(recipe(1));
+        planned.setStatus(MealPlanStatus.SUGGESTED);
+        when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Lunch"))
+                .thenReturn(Optional.of(planned));
+
         service.selectMeal("Lunch", 2, date, authentication("user-a"));
 
-        // tarkistus
-        assertThat(existing.isEaten()).isFalse();
+        // uusi resepti, hyväksytty, ei syöty
+        assertThat(planned.getRecipe().getRecipeId()).isEqualTo(2);
+        assertThat(planned.getStatus()).isEqualTo(MealPlanStatus.ACCEPTED);
+        assertThat(planned.isEaten()).isFalse();
+        verify(selectionRepository).save(planned);
     }
 
     /** Luo käyttäjän "user-a", jolla on profiili annetulla id:llä. */

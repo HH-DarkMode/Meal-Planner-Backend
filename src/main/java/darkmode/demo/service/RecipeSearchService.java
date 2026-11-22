@@ -189,7 +189,7 @@ public class RecipeSearchService {
      * joukot. Palauttaa null jos yhtaan specdiet-pohjaista ruokavaliota ei
      * pyydetty (= ei rajoitusta).
      *
-     * public (vaihe 3): viikkosuunnitelma laskee tämän KERRAN koko viikolle, koska
+     * public: viikkosuunnitelma laskee tämän KERRAN koko viikolle, koska
      * kysely on hidas (n. 0,7 s / ruokavalio). Muuten se ajettaisiin jokaiselle aterialle erikseen.
      */
     public Set<Integer> resolveDietCompatibleIds(Set<String> diets) {
@@ -211,7 +211,7 @@ public class RecipeSearchService {
 
     /**
      * Resepti -> JSON-vastauksen resepti, mukana tuntemattomat ainesosat ja diet-varoitus.
-     * Oli ennen private (toDto). Nyt public, jotta viikkonäkymä näyttää saman varoituksen kuin Recipes-sivu.
+     * Public, jotta viikkonäkymä ja suosikit näyttävät saman varoituksen kuin reseptihaku.
      */
     public RecipeSummaryDto toSummary(Recipe r, boolean dietFilterActive) {
         // Yksi lisäkysely per palautettava resepti (enintään size kpl), joten nopeus riittää.

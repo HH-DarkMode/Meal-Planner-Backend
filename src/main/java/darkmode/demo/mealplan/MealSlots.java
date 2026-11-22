@@ -20,7 +20,7 @@ import java.util.Map;
 public final class MealSlots {
 
     // Ateriannimet vakioina, jotta kirjoitusvirhe (esim. "Breakfest") huomataan jo käännösvaiheessa.
-    // Breakfast, Lunch, Snack ja Dinner ovat samat kuin ennen, joten vanha data ja Recipes-sivu toimivat.
+    // Breakfast, Lunch, Snack ja Dinner ovat samat kuin ennen, joten vanha data toimii.
     public static final String BREAKFAST = "Breakfast";
     public static final String MORNING_SNACK = "Morning snack";
     public static final String LUNCH = "Lunch";

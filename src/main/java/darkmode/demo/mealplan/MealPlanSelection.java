@@ -52,9 +52,8 @@ public class MealPlanSelection {
      * ("SUGGESTED" / "ACCEPTED"). Oletus olisi järjestysnumero (0 / 1), jota on
      * vaikea lukea kannasta ja joka menisi sekaisin, jos arvojen järjestys muuttuu.
      *
-     * Oletusarvo ACCEPTED: kun koodi luo uuden rivin (esim. Recipes-sivun
-     * "Add to meal plan"), se on hyväksytty kuten tähänkin asti. Näin vanha
-     * toiminta ei muutu tässä vaiheessa.
+     * Oletusarvo ACCEPTED: kun koodi luo uuden rivin (esim. suosikin valinta
+     * suunnitelmaan), se on hyväksytty. Viikkonäkymän ehdotukset asettavat tilaksi SUGGESTED.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

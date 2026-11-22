@@ -188,7 +188,8 @@ sanaan `COMMIT` ilman virheitä.
 ### 4.4 Päivitä taulut dumpin jälkeisiin muutoksiin
 
 **Tämä vaihe on pakollinen.** Dumpista puuttuvat dumpin jälkeen tehdyt taulut ja sarakkeet: käyttäjät
-(`users` ja `profiles.user_id`) sekä ateriavalinnat (`meal_plan_selections`). Ilman niitä backend ei
+(`users` ja `profiles.user_id`), ateriavalinnat (`meal_plan_selections`) sekä suosikkireseptit
+(`favorite_recipes`). Ilman niitä backend ei
 käynnisty. Aja tiedostot tässä järjestyksessä:
 
 ```powershell
@@ -196,9 +197,10 @@ cd C:\projektit\mealplanner\Meal-Planner-Backend
 $env:PGCLIENTENCODING = "UTF8"
 psql -U mealplanner -d mealplanner -h localhost -f db/profile-schema.sql
 psql -U mealplanner -d mealplanner -h localhost -f db/meal-plan-schema.sql
+psql -U mealplanner -d mealplanner -h localhost -f db/favorite-schema.sql
 ```
 
-Molemmat tiedostot voi ajaa uudelleen turvallisesti: ne lisäävät vain puuttuvat taulut ja sarakkeet.
+Kaikki tiedostot voi ajaa uudelleen turvallisesti: ne lisäävät vain puuttuvat taulut ja sarakkeet.
 
 ### 4.5 Tarkista tietokanta
 
@@ -206,7 +208,7 @@ Molemmat tiedostot voi ajaa uudelleen turvallisesti: ne lisäävät vain puuttuv
 psql -U mealplanner -d mealplanner -h localhost -c "\dt"
 ```
 
-Listassa pitää olla 12 taulua: `food_names`, `food_specdiets`, `food_units`, `foods`, `ingredient_matches`,
+Listassa pitää olla 13 taulua: `favorite_recipes`, `food_names`, `food_specdiets`, `food_units`, `foods`, `ingredient_matches`,
 `meal_plan_selections`, `profile_diets`, `profiles`, `recipe_ingredients`, `recipes`, `specdiets` ja `users`.
 
 ---

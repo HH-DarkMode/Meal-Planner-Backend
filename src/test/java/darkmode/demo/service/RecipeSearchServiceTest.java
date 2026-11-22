@@ -21,7 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Vaihe 3: viikkosuunnitelman reseptihaku (findRecipesForMeal). */
+/** Viikkosuunnitelman reseptihaku (findRecipesForMeal). */
 class RecipeSearchServiceTest {
 
     /** Päivätavoite 2000 kcal, ei makroja eikä ruokavalioita. */
