@@ -4,9 +4,9 @@
 
 ## Projektin kuvaus
 
-**AI Meal Planner** on meal planner -sovelluksen backend. Se tarjoaa REST API:n frontend-sovellukselle ja hoitaa käyttäjän profiilin, reseptihaun ja päivän ateriasuunnitelman.
+**AI Meal Planner** on meal planner -sovelluksen backend. Se tarjoaa REST API:n frontend-sovellukselle ja hoitaa käyttäjän profiilin, reseptihaun, viikon ateriasuunnitelman ja suosikkireseptit.
 
-Käyttäjä tallentaa profiiliin kalori- ja makrotavoitteensa sekä ruokavalionsa. Niiden perusteella backend ehdottaa reseptejä päivän aterioille (aamiainen, lounas, välipala ja päivällinen), ja käyttäjä voi valita ehdotuksista oman ateriasuunnitelmansa.
+Käyttäjä tallentaa profiiliin kalori- ja makrotavoitteensa, ruokavalionsa ja aterioiden määrän päivässä (1–8). Niiden perusteella backend ehdottaa reseptejä viikon aterioille. Käyttäjä hyväksyy ehdotukset ateriasuunnitelmaansa, vaihtaa ne tarvittaessa toisiin tai valitsee aterian paikalle suosikkireseptin.
 
 Reseptit ovat **Zenodon Culinary Recipes Dataset** -aineistosta (noin 50 000 Allrecipes-reseptiä). Reseptien ainesosat on yhdistetty **Finelin** elintarviketietoihin, joiden avulla backend suodattaa reseptit ruokavalion mukaan.
 
@@ -14,18 +14,38 @@ Reseptit ovat **Zenodon Culinary Recipes Dataset** -aineistosta (noin 50 000 All
 
 ### Toteutettu
 
-* käyttäjän profiilin tallentaminen: tavoitteet (kalorit, proteiini, rasva, hiilihydraatit), ruokavaliot ja aterioiden määrä päivässä
+* käyttäjän rekisteröityminen ja kirjautuminen JWT-tokenilla
+* käyttäjän profiilin tallentaminen: tavoitteet (kalorit, proteiini, rasva, hiilihydraatit), ruokavaliot ja aterioiden määrä päivässä (1–8)
 * reseptihaku kalori- ja makrotavoitteiden perusteella
-* päivän ateriaehdotukset: päivän energiatavoite jaetaan aterioille (aamiainen 25 %, lounas 30 %, välipala 15 %, päivällinen 30 %)
 * ruokavaliosuodatus: vegetarian, vegan, gluten-free, dairy-free, high-protein ja low-carb
 * varoitus, jos ruokavaliosopivuutta ei voi taata, koska osaa ainesosista ei tunnistettu Finelistä
 * reseptin ainesosat ja valmistusohjeet
-* päivän ateriasuunnitelman valintojen tallentaminen ja tyhjentäminen
-* käyttäjän rekisteröityminen ja kirjautuminen JWT-tokenilla
+* viikon ateriasuunnitelma: backend luo ehdotukset tälle päivälle ja tuleville päiville, kun viikko avataan, ja tallentaa ne. Päivän energiatavoite jaetaan aterioille ateriamäärän mukaan (ks. alla).
+* ehdotuksen hyväksyminen ja hyväksynnän peruminen, koko päivän hyväksyminen kerralla (Accept all) ja uusi ehdotus aterialle (Vaihda)
+* syöty-merkinnät hyväksytyille aterioille. Syötyä ateriaa ei voi poistaa suunnitelmasta eikä vaihtaa toiseen reseptiin.
+* kalenteri: hyväksytyt ateriat valitulta aikaväliltä
+* suosikkireseptit: lisäys, poisto ja lista (uusin ensin) sekä suosikin valinta aterian paikalle
+
+### Aterioiden energiaosuudet
+
+Osuus vaikuttaa vain siihen, minkä kokoisia reseptejä aterialle ehdotetaan. Kalenterin summat lasketaan valittujen reseptien todellisista ravintoarvoista. Iltapalan (Supper) ehdotukset haetaan aamiaisresepteistä ja kaikki välipalat Snack-kategoriasta. Jos ateriamäärää ei ole asetettu, käytetään neljää ateriaa.
+
+| Aterioita päivässä | Ateriat ja osuus päivän energiatavoitteesta |
+|---|---|
+| 1 | Dinner 100 % |
+| 2 | Lunch 45 %, Dinner 55 % |
+| 3 | Breakfast 30 %, Lunch 35 %, Dinner 35 % |
+| 4 (oletus) | Breakfast 25 %, Lunch 30 %, Dinner 30 %, Supper 15 % |
+| 5 | Breakfast 25 %, Lunch 30 %, Snack 10 %, Dinner 25 %, Supper 10 % |
+| 6 | Breakfast 20 %, Morning snack 10 %, Lunch 25 %, Snack 10 %, Dinner 25 %, Supper 10 % |
+| 7 | Breakfast 20 %, Morning snack 10 %, Lunch 20 %, Snack 10 %, Dinner 20 %, Evening snack 10 %, Supper 10 % |
+| 8 | Breakfast 15 %, Morning snack 10 %, Lunch 20 %, Snack 10 %, Dinner 20 %, Evening snack 10 %, Supper 10 %, Late snack 5 % |
+
+Osuudet on määritelty luokassa [`MealSlots`](src/main/java/darkmode/demo/mealplan/MealSlots.java).
 
 ### Suunnitteilla
 
-* viikon meal plan
+Tulevat ominaisuudet ovat [backlogissa](https://github.com/orgs/HH-DarkMode/projects/1).
 
 ## Miten reseptit ja ravintoarvot on muodostettu
 
@@ -38,7 +58,7 @@ Data on koottu etukäteen Python-skripteillä yhdeksi PostgreSQL-dumpiksi. Ajon 
 
 ## Tietokanta (ER-kaavio)
 
-Sovelluksen omat taulut ovat `users`, `profiles`, `profile_diets` ja `meal_plan_selections`. Reseptit, ainesosat, Finelin elintarvikkeet (`foods`, `food_*`, `specdiets`) ja ainesosien Fineli-vastaavuudet tulevat valmiista dumpista. `recipes`-taulusta on jätetty pois Zenodon ja Finelin raaka-arvot (`src_*`, `calc_*`), joista annoskohtaiset ravintoarvot on laskettu.
+Sovelluksen omat taulut ovat `users`, `profiles`, `profile_diets`, `meal_plan_selections` ja `favorite_recipes`. Reseptit, ainesosat, Finelin elintarvikkeet (`foods`, `food_*`, `specdiets`) ja ainesosien Fineli-vastaavuudet tulevat valmiista dumpista. `recipes`-taulusta on jätetty pois Zenodon ja Finelin raaka-arvot (`src_*`, `calc_*`), joista annoskohtaiset ravintoarvot on laskettu.
 
 ```mermaid
 erDiagram
@@ -46,6 +66,8 @@ erDiagram
     profiles ||--o{ profile_diets : "ruokavaliot"
     profiles ||--o{ meal_plan_selections : "suunnitelma"
     recipes ||--o{ meal_plan_selections : "valittu ateriaksi"
+    profiles ||--o{ favorite_recipes : "suosikit"
+    recipes ||--o{ favorite_recipes : "suosikkina"
     recipes ||--|{ recipe_ingredients : "ainesosat"
     recipe_ingredients }o--o| ingredient_matches : "nimen perusteella"
     recipe_ingredients }o--o| foods : "elintarvike"
@@ -86,6 +108,12 @@ erDiagram
         int recipe_id FK
         boolean eaten
         varchar status "SUGGESTED / ACCEPTED"
+    }
+    favorite_recipes {
+        bigint id PK
+        bigint profile_id FK "UK yhdessä recipe_id"
+        int recipe_id FK
+        timestamp created_at
     }
     recipes {
         int recipe_id PK
@@ -161,7 +189,7 @@ erDiagram
     }
 ```
 
-`meal_plan_selections.profile_id` viittaa profiiliin, vaikka kannassa ei ole sille vierasavainta. Ruokavaliohaku yhdistää `recipe_ingredients`-taulun `ingredient_matches`-tauluun ainesosan nimellä (`ingredient_name_clean` = `ingredient_name`), ei vierasavaimella.
+`meal_plan_selections.profile_id` viittaa profiiliin, vaikka kannassa ei ole sille vierasavainta. `favorite_recipes.profile_id`:lle vierasavain (`ON DELETE CASCADE`) syntyy vain, kun taulu luodaan skriptillä [db/favorite-schema.sql](db/favorite-schema.sql). Rahdissa Hibernate luo taulun itse (`ddl-auto=update`), eikä vierasavainta silloin ole. Ruokavaliohaku yhdistää `recipe_ingredients`-taulun `ingredient_matches`-tauluun ainesosan nimellä (`ingredient_name_clean` = `ingredient_name`), ei vierasavaimella.
 
 ## REST API
 
@@ -245,7 +273,7 @@ JWT-avainta ei tallenneta repoon. Avaimen vaihtaminen kirjaa kaikki käyttäjät
 
 ## Projektin tila
 
-Sprint 2 on valmis ([release](https://github.com/HH-DarkMode/Meal-Planner-Backend/releases/tag/sprint-2)). Backend on julkaistu Rahtiin, ja reseptihaku, ruokavaliosuodatus, profiili ja päivän ateriasuunnitelma toimivat.
+Sprint 3 on valmis ([release](https://github.com/HH-DarkMode/Meal-Planner-Backend/releases/tag/Release-Sprint3)). Backend on julkaistu Rahtiin, ja reseptihaku, ruokavaliosuodatus, profiili, viikon ateriasuunnitelma ja kalenteri toimivat. Sprint 3:n jälkeen on lisätty suosikkireseptit.
 
 ## Backlog-linkki
 * **https://github.com/orgs/HH-DarkMode/projects/1**
