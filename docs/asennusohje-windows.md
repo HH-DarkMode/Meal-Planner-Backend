@@ -1,6 +1,6 @@
 # Asennusohje (Windows)
 
-*Laadittu 19.10.2026, päivitetty 2.11.2026.*
+*Laadittu 19.10.2026, päivitetty 22.11.2026.*
 
 Tällä ohjeella AI Meal Plannerin saa käyntiin omalla Windows-koneella: PostgreSQL-tietokanta, backend
 (Spring Boot) ja frontend (React + Vite). Ohje on tehty Windows 10:lle ja 11:lle. Linuxin ja macOS:n erot
@@ -189,8 +189,7 @@ sanaan `COMMIT` ilman virheitä.
 
 **Tämä vaihe on pakollinen.** Dumpista puuttuvat dumpin jälkeen tehdyt taulut ja sarakkeet: käyttäjät
 (`users` ja `profiles.user_id`), ateriavalinnat (`meal_plan_selections`) sekä suosikkireseptit
-(`favorite_recipes`). Ilman niitä backend ei
-käynnisty. Aja tiedostot tässä järjestyksessä:
+(`favorite_recipes`). Ilman niitä backend ei käynnisty. Aja tiedostot tässä järjestyksessä:
 
 ```powershell
 cd C:\projektit\mealplanner\Meal-Planner-Backend
@@ -312,6 +311,7 @@ Avaa selaimessa <http://localhost:5173>.
 2. Avaa **Meal plan** -sivu. Viikkonäkymässä pitäisi näkyä ateriaehdotukset tälle päivälle
    ja loppuviikolle (oletuksena aamiainen, lounas, päivällinen ja iltapala).
 3. Hyväksy ateria napilla **Add** ja tarkista, että se näkyy **Calendar**-sivulla.
+4. Paina jonkin aterian sydäntä (♡) ja tarkista, että resepti näkyy **My recipes** -sivulla.
 
 ---
 
@@ -350,10 +350,10 @@ ennen backendin käynnistämistä. `git pull` päivittää vain tiedostot, ei om
 | `JAVA_HOME is not defined correctly` | JAVA_HOME-valinta jäi pois Javan asennuksessa. Aja asennusohjelma uudelleen, valitse *Set JAVA_HOME variable* ja avaa uusi ikkuna. |
 | `npm.ps1 cannot be loaded because running scripts is disabled` | Aja `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (kohta 2.5) tai käytä komentoja `npm.cmd install` ja `npm.cmd run dev`. |
 | `password authentication failed for user "mealplanner"` | Salasana on väärä `application-local.properties`-tiedostossa tai `psql`-komennossa. |
-| Backend ei käynnisty, ja lokissa lukee `Schema-validation: missing table [meal_plan_selections]` tai `missing table [users]` | Kohta 4.4 on tekemättä. |
-| `Schema-validation: missing column` (esim. `[user_id] in table [profiles]` tai `[eaten] in table [meal_plan_selections]`) | Tietokanta on luotu vanhemmalla dumpilla tai `db/`-tiedostoja on muutettu sen jälkeen. Aja `db/profile-schema.sql`, `db/meal-plan-schema.sql` ja `db/recipe-nutrition.sql` kohdan 4.4 tapaan. Kaikki voi ajaa uudelleen turvallisesti. |
+| Backend ei käynnisty, ja lokissa lukee `Schema-validation: missing table [meal_plan_selections]`, `missing table [users]` tai `missing table [favorite_recipes]` | Kohta 4.4 on tekemättä tai jäänyt kesken. Jos asennus on tehty ennen suosikkeja, aja `db/favorite-schema.sql`. |
+| `Schema-validation: missing column` (esim. `[user_id] in table [profiles]` tai `[status] in table [meal_plan_selections]`) | Tietokanta on luotu vanhemmalla dumpilla tai `db/`-tiedostoja on muutettu sen jälkeen. Aja `db/profile-schema.sql`, `db/meal-plan-schema.sql`, `db/favorite-schema.sql` ja `db/recipe-nutrition.sql` kohdan 4.4 tapaan. Kaikki voi ajaa uudelleen turvallisesti. |
 | Kirjautumisen jälkeen profiili on tyhjä | Ennen kirjautumisen lisäämistä luodut profiilit eivät kuulu kenellekään käyttäjälle (`user_id` on tyhjä). Täytä profiili uudelleen. |
-| Reseptisivulla lukee *No recipes match your goals and diet*, ja profiilin *Nutrition target* näyttää nollaa | Profiili on tallennettu kerran keskeneräisenä (ilman sukupuolta tai pituutta), jolloin kaloreiksi tallentui 0, eikä frontend laske arvoja enää uudelleen. Kirjoita kalorit ja makrot käsin *Nutrition target* -kenttiin ja tallenna. |
+| Meal plan -sivulla lukee aterioiden kohdalla *No suitable recipe found*, ja profiilin *Nutrition target* näyttää nollaa | Profiili on tallennettu kerran keskeneräisenä (ilman sukupuolta tai pituutta), jolloin kaloreiksi tallentui 0, eikä frontend laske arvoja enää uudelleen. Kirjoita kalorit ja makrot käsin *Nutrition target* -kenttiin ja tallenna. |
 | `invalid byte sequence` tai `has no equivalent in encoding "WIN1252"` datan latauksessa | Tietokanta on luotu ilman UTF-8:aa tai `PGCLIENTENCODING` puuttuu. Poista kanta (`psql -U postgres -h localhost -c "DROP DATABASE mealplanner;"`), luo se uudelleen kohdan 4.1 komennolla ja lataa data uudelleen. |
 | `Port 8080 was already in use` | Toinen backend on jo käynnissä. Katso alta, miten löydät ja sammutat sen. |
 | Frontend näyttää "Could not load recipes. Is the backend running?" | Backend ei ole käynnissä portissa 8080, tai `.env`-tiedoston osoite on muutettu (kohta 6.1). Käynnistä `npm run dev` uudelleen aina kun `.env` muuttuu. |
