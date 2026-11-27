@@ -68,8 +68,8 @@ public class MealPlanController {
      * Pyynnön runko: { "date": "2026-11-23", "mealType": "Lunch", "eaten": true }
      */
     @PatchMapping("/selections/eaten")
-    public void setEaten(@RequestBody SetEatenRequest request, Authentication authentication) {
-        mealPlanService.setEaten(request.date(), request.mealType(), request.eaten(), authentication);
+    public void updateEatenStatus(@RequestBody SetEatenRequest request, Authentication authentication) {
+        mealPlanService.updateEatenStatus(request.date(), request.mealType(), request.eaten(), authentication);
     }
 
     /**

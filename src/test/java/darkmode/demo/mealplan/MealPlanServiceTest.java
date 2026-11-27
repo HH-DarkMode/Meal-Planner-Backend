@@ -108,7 +108,7 @@ class MealPlanServiceTest {
 
     /** Ehdotusta (ei hyväksytty) ei voi merkitä syödyksi: virhe 409. */
     @Test
-    void setEatenRejectsSuggestion() {
+    void updateEatenStatusRejectsSuggestion() {
         givenUserWithProfile(42L);
         LocalDate date = LocalDate.of(2026, 11, 23);
         MealPlanSelection suggestion = new MealPlanSelection();
@@ -116,7 +116,7 @@ class MealPlanServiceTest {
         when(selectionRepository.findByProfileIdAndPlanDateAndMealType(42L, date, "Lunch"))
                 .thenReturn(Optional.of(suggestion));
 
-        assertThatThrownBy(() -> service.setEaten(date, "Lunch", true, authentication("user-a")))
+        assertThatThrownBy(() -> service.updateEatenStatus(date, "Lunch", true, authentication("user-a")))
                 .isInstanceOfSatisfying(ResponseStatusException.class,
                         e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
         assertThat(suggestion.isEaten()).isFalse();
@@ -141,7 +141,7 @@ class MealPlanServiceTest {
 
     /** Täppä: aterian syöty-tila tallentuu käyttäjän omaan riviin. */
     @Test
-    void setEatenUpdatesPlannedMealOfOwnProfile() {
+    void updateEatenStatusUpdatesPlannedMealOfOwnProfile() {
         // valmistelu: käyttäjän profiililla on suunniteltu lounas
         givenUserWithProfile(42L);
         LocalDate date = LocalDate.of(2026, 11, 23);
@@ -150,7 +150,7 @@ class MealPlanServiceTest {
                 .thenReturn(Optional.of(selection));
 
         // teko
-        service.setEaten(date, "Lunch", true, authentication("user-a"));
+        service.updateEatenStatus(date, "Lunch", true, authentication("user-a"));
 
         // tarkistus: tila vaihtui ja muutos tallennettiin
         assertThat(selection.isEaten()).isTrue();
@@ -159,15 +159,30 @@ class MealPlanServiceTest {
 
     /** Suunnittelematonta ateriaa ei voi merkitä syödyksi: virhe 404. */
     @Test
-    void setEatenReturns404WhenMealIsNotPlanned() {
+    void updateEatenStatusReturns404WhenMealIsNotPlanned() {
         givenUserWithProfile(42L);
         when(selectionRepository.findByProfileIdAndPlanDateAndMealType(
                 org.mockito.Mockito.eq(42L), org.mockito.Mockito.any(), org.mockito.Mockito.eq("Lunch")))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.setEaten(LocalDate.of(2026, 11, 23), "Lunch", true, authentication("user-a")))
+        assertThatThrownBy(() -> service.updateEatenStatus(LocalDate.of(2026, 11, 23), "Lunch", true, authentication("user-a")))
                 .isInstanceOfSatisfying(ResponseStatusException.class,
                         e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    /** Ilman profiilia ateriaa ei voi merkitä syödyksi: virhe 400, eikä suunnitelmaa haeta. */
+    @Test
+    void updateEatenStatusRequiresProfile() {
+        // valmistelu: käyttäjä on olemassa, mutta hän ei ole tallentanut profiilia
+        User user = new User();
+        user.setUsername("user-a");
+        when(userRepository.findByUsername("user-a")).thenReturn(Optional.of(user));
+        when(profileRepository.findByUserId(null)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.updateEatenStatus(LocalDate.of(2026, 11, 23), "Lunch", true, authentication("user-a")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+        org.mockito.Mockito.verifyNoInteractions(selectionRepository);
     }
 
     /** Resepti voidaan valita myös muulle kuin tälle päivälle (viikkosuunnitelma). */

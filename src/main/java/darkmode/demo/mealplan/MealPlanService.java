@@ -90,26 +90,42 @@ public class MealPlanService {
     }
 
     /**
-     * Merkitsee yhden suunnitellun aterian syödyksi tai syömättömäksi.
-     * Ateria haetaan käyttäjän omasta profiilista päivän ja ateriatyypin mukaan.
-     * Jos ateriaa ei ole suunnitelmassa, palautetaan virhe 404.
+     * Merkitsee suunnitellun aterian syödyksi (eaten = true) tai poistaa merkinnän (eaten = false).
+     * Ateria haetaan kirjautuneen käyttäjän omasta suunnitelmasta päivän ja ateriatyypin mukaan.
+     *
+     * Virheet:
+     *  - 400, jos käyttäjä ei ole vielä tallentanut profiilia
+     *  - 404, jos päivän ateriaa ei ole suunnitelmassa
+     *  - 409, jos ateria on vasta ehdotus (vain hyväksytyn aterian voi merkitä syödyksi)
      */
     @Transactional
-    public void setEaten(LocalDate date, String mealType, boolean eaten, Authentication authentication) {
+    public void updateEatenStatus(LocalDate date, String mealType, boolean eaten, Authentication authentication) {
+        MealPlanSelection plannedMeal = findPlannedMeal(requireProfileId(authentication), date, mealType);
+        requireAccepted(plannedMeal);
+        plannedMeal.setEaten(eaten);
+        selectionRepository.save(plannedMeal);
+    }
+
+    /** Kirjautuneen käyttäjän profiilin id. Jos profiilia ei ole, virhe 400. */
+    private Long requireProfileId(Authentication authentication) {
         Long profileId = currentProfileId(authentication);
         if (profileId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tallenna profiili ensin");
         }
-        MealPlanSelection selection = selectionRepository
-                .findByProfileIdAndPlanDateAndMealType(profileId, date, mealType)
+        return profileId;
+    }
+
+    /** Käyttäjän suunnitelman ateria tiettynä päivänä. Jos sitä ei ole, virhe 404. */
+    private MealPlanSelection findPlannedMeal(Long profileId, LocalDate date, String mealType) {
+        return selectionRepository.findByProfileIdAndPlanDateAndMealType(profileId, date, mealType)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ateriaa ei löydy suunnitelmasta"));
-        // Vain hyväksytyn aterian voi merkitä syödyksi (ehdotusta ei ole otettu suunnitelmaan).
-        if (selection.getStatus() != MealPlanStatus.ACCEPTED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Vain hyväksytyn aterian voi merkitä syödyksi");
+    }
+
+    /** Vain hyväksytyn aterian voi merkitä syödyksi (ehdotusta ei ole otettu suunnitelmaan). Muuten virhe 409. */
+    private static void requireAccepted(MealPlanSelection plannedMeal) {
+        if (!plannedMeal.isAccepted()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Vain hyväksytyn aterian voi merkitä syödyksi");
         }
-        selection.setEaten(eaten);
-        selectionRepository.save(selection);
     }
 
     /**
