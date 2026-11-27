@@ -114,6 +114,11 @@ public class MealPlanSelection {
         this.status = status;
     }
 
+    /** Onko ateria hyväksytty suunnitelmaan (eikä vain ehdotus)? */
+    public boolean isAccepted() {
+        return status == MealPlanStatus.ACCEPTED;
+    }
+
     public Recipe getRecipe() {
         return recipe;
     }
