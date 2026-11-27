@@ -121,30 +121,29 @@ class WeekPlanServiceTest {
         verify(recipeSearchService, never()).findRecipesForMeal(any(), any(), anyInt(), any(), any());
     }
 
-    /** Vegaanilla ja tuntemattomilla ainesosilla diet-varoitus näkyy viikkonäkymässä. */
+    /** Viikkonäkymä antaa profiilin ruokavaliot reseptin muunnokselle, ja diet-varoitus näkyy vastauksessa. */
     @Test
     void getWeekShowsDietWarningForUnknownIngredients() {
         profile.setDiets(List.of("vegan"));
         givenWeekRows(List.of(row(MONDAY, "Lunch", 5, MealPlanStatus.ACCEPTED)));
-        when(recipeSearchService.toSummary(any(), eq(true))).thenReturn(summary(5, true));
+        when(recipeSearchService.toSummary(any(), eq(Set.of("vegan")))).thenReturn(summary(5, true));
 
         // mennyt viikko, jotta uusia ehdotuksia ei luoda
         WeekPlanDto week = service.getWeek(MONDAY, MONDAY.plusDays(7), authentication());
 
         assertThat(week.entries().get(0).recipe().dietWarning()).isTrue();
-        verify(recipeSearchService).toSummary(any(), eq(true));
+        verify(recipeSearchService).toSummary(any(), eq(Set.of("vegan")));
     }
 
-    /** Ilman ainesosista tarkistettavaa ruokavaliota (esim. pelkkä high-protein) varoitusta ei näytetä. */
+    /** Profiilin ruokavaliot välitetään sellaisenaan (esim. pelkkä high-protein). Varoitussääntö: RecipeSearchService. */
     @Test
-    void getWeekShowsNoDietWarningWithoutIngredientBasedDiet() {
+    void getWeekPassesProfileDietsToRecipeSummary() {
         profile.setDiets(List.of("high-protein"));
         givenWeekRows(List.of(row(MONDAY, "Lunch", 5, MealPlanStatus.ACCEPTED)));
 
         service.getWeek(MONDAY, MONDAY.plusDays(7), authentication());
 
-        verify(recipeSearchService).toSummary(any(), eq(false));
-        verify(recipeSearchService, never()).toSummary(any(), eq(true));
+        verify(recipeSearchService).toSummary(any(), eq(Set.of("high-protein")));
     }
 
     // ---------- hyväksyntä ----------
@@ -296,7 +295,7 @@ class WeekPlanServiceTest {
 
     private static RecipeSummaryDto summary(int id, boolean dietWarning) {
         return new RecipeSummaryDto(id, "Recipe " + id, null, null, null, 600.0, 30.0, 20.0, 60.0,
-                null, dietWarning ? List.of("chicken") : List.of(), dietWarning);
+                null, dietWarning ? List.of("chicken") : List.of(), dietWarning, List.of());
     }
 
     private static Profile profileWith(int calories, int mealsPerDay, List<String> diets) {

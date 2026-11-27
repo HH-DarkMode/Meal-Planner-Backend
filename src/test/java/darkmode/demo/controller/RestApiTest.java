@@ -57,7 +57,7 @@ class RestApiTest {
         when(recipeSearchService.search(any(RecipeSearchRequest.class), eq(2)))
                 .thenReturn(List.of(new RecipeSummaryDto(
                         7, "Tomato pasta", "/recipes/7", 10, 20,
-                        450.0, 18.0, 12.0, 62.0, "source", List.of(), false)));
+                        450.0, 18.0, 12.0, 62.0, "source", List.of(), false, List.of())));
 
         mockMvc.perform(get("/api/recipes/search")
                         .param("calories", "600")

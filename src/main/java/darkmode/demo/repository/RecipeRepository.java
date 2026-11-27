@@ -46,10 +46,15 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
      * Reseptit, jotka sopivat annettuun erikoisruokavalioon (specdiet-koodi).
      * Ainesosan Fineli-elintarvike haetaan nimen perusteella ingredient_matches-taulusta.
      * Resepti kelpaa, kun
-     *  1. yksikaan tunnettu ainesosa ei riko ruokavaliota (kaikilla on koodi) ja
-     *  2. vahintaan puolet reseptin riveista on tunnettuja (eli matchattu Fineliin).
-     * Tuntemattomia rivejä voi siis olla, ja niista varoitetaan hakutuloksessa
-     * (ks. findUnmatchedIngredientNames).
+     *  1. yksikään tunnettu ainesosa ei riko ruokavaliota (kaikilla on koodi),
+     *  2. vähintään puolet reseptin riveistä on tunnettuja (eli matchattu Fineliin) ja
+     *  3. yhdenkään tuntemattoman ainesosan nimessä ei ole ruokavaliolle estettyä sanaa
+     *     (blockedPattern, esim. "skinless" tai "italian sausage"), ellei nimessä ole myös
+     *     sallittua sanaa (allowedPattern, esim. "vegan"). blockedPattern null = ei estoa.
+     *  4. reseptin nimessä ei ole estettyä sanaa samalla säännöllä (esim. "Spaghetti and Meatballs").
+     *     Sanalistat: ks. DietIngredientRules.
+     * Muita tuntemattomia rivejä voi olla, ja niistä varoitetaan hakutuloksessa
+     * (ks. findIngredientNames). ~* = vastaa kuviota (isot ja pienet kirjaimet samoin), !~* = ei vastaa.
      *
      * Ainesosarivit lasketaan kertaalleen GROUP BY:llä (ingredient_info) sen sijaan,
      * että jokaiselle reseptille ajettaisiin oma korreloitu aliohjelma — alkuperäinen
@@ -63,7 +68,12 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
                        bool_or(im.foodid IS NOT NULL AND NOT EXISTS (
                            SELECT 1 FROM food_specdiets fs
                            WHERE fs.foodid = im.foodid AND fs.code = :code
-                       )) AS has_incompatible
+                       )) AS has_incompatible,
+                       bool_or(im.foodid IS NULL
+                           AND CAST(:blockedPattern AS text) IS NOT NULL
+                           AND ri.ingredient_name_clean ~* CAST(:blockedPattern AS text)
+                           AND ri.ingredient_name_clean !~* CAST(:allowedPattern AS text)
+                       ) AS has_blocked_unknown
                 FROM recipe_ingredients ri
                 LEFT JOIN ingredient_matches im ON im.ingredient_name = ri.ingredient_name_clean
                 GROUP BY ri.recipe_id
@@ -74,16 +84,34 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
             WHERE r.total_lines > 0
               AND ii.matched_count >= r.total_lines * 0.5
               AND NOT COALESCE(ii.has_incompatible, false)
+              AND NOT COALESCE(ii.has_blocked_unknown, false)
+              -- reseptin nimessä estetty sana (esim. "Spaghetti and Meatballs"), ellei myös sallittua (esim. "Vegan")
+              AND NOT (CAST(:blockedPattern AS text) IS NOT NULL
+                       AND r.name ~* CAST(:blockedPattern AS text)
+                       AND r.name !~* CAST(:allowedPattern AS text))
             """, nativeQuery = true)
-    List<Integer> findRecipeIdsCompatibleWithDiet(@Param("code") String code);
+    List<Integer> findRecipeIdsCompatibleWithDiet(@Param("code") String code,
+            @Param("blockedPattern") String blockedPattern, @Param("allowedPattern") String allowedPattern);
 
-    /** Reseptin ainesosat, joita ei ole matchattu Fineliin (ruokavaliosopivuutta ei voi tarkistaa). */
+    /** Reseptin ainesosan nimi ja tieto, onko se tunnistettu Finelistä. */
+    interface IngredientName {
+        String getIngredient();
+
+        Boolean getRecognized();
+    }
+
+    /**
+     * Reseptin kaikki ainesosat rivijärjestyksessä. Tunnistamattomista tulee ⚠-varoitus, ja
+     * maitotuotteista ja kananmunasta vegaanille korvausvinkki (myös tunnistetuista, esim. "butter").
+     * IngredientName on projektio: Spring täyttää sen sarakkeista ingredient ja recognized.
+     */
     @Query(value = """
-            SELECT ri.ingredient_name_clean
+            SELECT ri.ingredient_name_clean AS ingredient,
+                   CASE WHEN im.foodid IS NULL THEN false ELSE true END AS recognized
             FROM recipe_ingredients ri
             LEFT JOIN ingredient_matches im ON im.ingredient_name = ri.ingredient_name_clean
-            WHERE ri.recipe_id = :recipeId AND im.foodid IS NULL
+            WHERE ri.recipe_id = :recipeId
             ORDER BY ri.line_no
             """, nativeQuery = true)
-    List<String> findUnmatchedIngredientNames(@Param("recipeId") Integer recipeId);
+    List<IngredientName> findIngredientNames(@Param("recipeId") Integer recipeId);
 }

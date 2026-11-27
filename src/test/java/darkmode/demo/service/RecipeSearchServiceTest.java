@@ -1,9 +1,11 @@
 package darkmode.demo.service;
 
 import darkmode.demo.dto.RecipeSearchRequest;
+import darkmode.demo.dto.RecipeSummaryDto;
 import darkmode.demo.entity.Recipe;
 import darkmode.demo.mealplan.MealSlots.MealSlot;
 import darkmode.demo.repository.RecipeRepository;
+import darkmode.demo.repository.RecipeRepository.IngredientName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -80,6 +82,57 @@ class RecipeSearchServiceTest {
         List<Recipe> result = service.findRecipesForMeal(DAILY, LUNCH, 7, null, Set.of());
 
         assertThat(result).hasSize(3);
+    }
+
+    /** Vegaanilla maitotuote ja kananmuna menevät korvausvinkkiin (🌱), eivät varoitukseen (⚠). */
+    @Test
+    void toSummaryListsVeganSwapsSeparatelyFromWarning() {
+        when(recipeRepository.findIngredientNames(1)).thenReturn(List.of(
+                ingredient("butter", true), ingredient("eggs", false), ingredient("flour", true)));
+
+        RecipeSummaryDto summary = service.toSummary(recipes(1).get(0), Set.of("vegan"));
+
+        assertThat(summary.veganSwapIngredients()).containsExactly("butter", "eggs");
+        assertThat(summary.unmatchedIngredients()).isEmpty();
+        assertThat(summary.dietWarning()).isFalse();
+    }
+
+    /** Mausteet eivät aiheuta varoitusta, mutta epävarma ainesosa aiheuttaa. */
+    @Test
+    void toSummaryIgnoresSpicesInWarning() {
+        when(recipeRepository.findIngredientNames(1)).thenReturn(List.of(
+                ingredient("vanilla extract", false), ingredient("cumin", false), ingredient("taco seasoning mix", false)));
+
+        RecipeSummaryDto summary = service.toSummary(recipes(1).get(0), Set.of("vegetarian"));
+
+        assertThat(summary.unmatchedIngredients()).containsExactly("taco seasoning mix");
+        assertThat(summary.dietWarning()).isTrue();
+        assertThat(summary.veganSwapIngredients()).isEmpty(); // vinkki vain vegaanille
+    }
+
+    /** Ilman ainesosista tarkistettavaa ruokavaliota (esim. high-protein) varoitusta ei näytetä. */
+    @Test
+    void toSummaryShowsNoWarningWithoutIngredientBasedDiet() {
+        when(recipeRepository.findIngredientNames(1)).thenReturn(List.of(ingredient("taco seasoning mix", false)));
+
+        RecipeSummaryDto summary = service.toSummary(recipes(1).get(0), Set.of("high-protein"));
+
+        assertThat(summary.dietWarning()).isFalse();
+    }
+
+    /** Testin ainesosa: nimi ja tieto, onko se tunnistettu Finelistä (RecipeRepository.IngredientName). */
+    private static IngredientName ingredient(String name, boolean recognized) {
+        return new IngredientName() {
+            @Override
+            public String getIngredient() {
+                return name;
+            }
+
+            @Override
+            public Boolean getRecognized() {
+                return recognized;
+            }
+        };
     }
 
     /** Luo reseptit id:illä 1..count. Kalorit 600 kcal, jotta makrovertailu toimii. */
