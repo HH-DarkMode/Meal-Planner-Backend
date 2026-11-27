@@ -28,8 +28,9 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
               AND r.kcal_per_serving > 0
               AND (:minCalories IS NULL OR r.kcal_per_serving >= :minCalories)
               AND (:maxCalories IS NULL OR r.kcal_per_serving <= :maxCalories)
-              -- ateriatyyppi (esim. 'Breakfast'), null = kaikki
-              AND (CAST(:category AS text) IS NULL OR r.category LIKE '%' || CAST(:category AS text) || '%')
+              -- ateriaryhmä säännöllisenä lausekkeena, esim. 'Breakfast' tai 'Lunch|Dinner' (= Lunch tai Dinner),
+              -- null = kaikki
+              AND (CAST(:category AS text) IS NULL OR r.category ~ CAST(:category AS text))
               -- high-protein: vahintaan 25 % energiasta proteiinista
               AND (:highProtein = false OR r.protein_per_serving * 4 >= r.kcal_per_serving * 0.25)
               -- low-carb: enintaan 20 % energiasta hiilihydraateista

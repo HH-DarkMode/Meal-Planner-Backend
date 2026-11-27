@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
  * - Ehdotuksia luodaan vain tälle päivälle ja tuleville päiville, ei menneille.
  * - Syötyä ateriaa ei voi poistaa suunnitelmasta: ensin poistetaan syöty-merkintä.
  * - Hyväksyttyä ateriaa ei voi vaihtaa: ensin perutaan hyväksyntä.
+ * - Viikolle ehdotetaan ensin eri reseptejä. Jos niitä ei riitä, sama resepti voi toistua.
  * - "Tämä päivä" (today) tulee aina selaimesta, jotta aikavyöhyke on oikea myös Rahdissa.
  */
 @Service
@@ -96,6 +97,9 @@ public class WeekPlanService {
             usedRecipeIds.add(s.getRecipe().getRecipeId());
         }
 
+        // Edellisen viikon reseptit: niitä vältetään, jotta peräkkäiset viikot eivät toista toisiaan.
+        Set<Integer> lastWeekRecipeIds = recipeIdsBetween(profile.getId(), start.minusDays(7), start.minusDays(1));
+
         RecipeSearchRequest daily = dailyTargets(profile);
         Set<Integer> dietIds = null;
         boolean dietsResolved = false;
@@ -113,9 +117,9 @@ public class WeekPlanService {
                 dietIds = recipeSearchService.resolveDietCompatibleIds(daily.diets());
                 dietsResolved = true;
             }
-            List<Recipe> recipes = recipeSearchService.findRecipesForMeal(
-                    daily, slot, missingDays.size(), dietIds, usedRecipeIds);
-            // Jos sopivia reseptejä on vähemmän kuin päiviä, loput päivät jäävät tyhjiksi (näytetään tyhjänä).
+            List<Recipe> recipes = pickRecipesForDays(daily, slot, missingDays.size(), dietIds,
+                    usedRecipeIds, lastWeekRecipeIds);
+            // Tyhjä paikka jää vain, jos aterialle ei löydy yhtään sopivaa reseptiä.
             for (int i = 0; i < recipes.size(); i++) {
                 created.add(newSuggestion(profile.getId(), missingDays.get(i), slot.mealType(), recipes.get(i)));
                 usedRecipeIds.add(recipes.get(i).getRecipeId());
@@ -249,6 +253,51 @@ public class WeekPlanService {
     private MealPlanSelection findRow(Profile profile, LocalDate date, String mealType) {
         return selectionRepository.findByProfileIdAndPlanDateAndMealType(profile.getId(), date, mealType)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ateriaa ei löydy suunnitelmasta"));
+    }
+
+    /**
+     * Valitsee reseptit aterialle count päiväksi kolmessa portaassa:
+     * 1. reseptit, joita ei ole käytetty tällä eikä edellisellä viikolla
+     * 2. jos ei riitä: myös edellisen viikon reseptit kelpaavat
+     * 3. jos ei vieläkään riitä: tämän viikon reseptit voivat toistua (käyttäjä voi vaihtaa ↻:lla tai ♥▾:lla)
+     */
+    private List<Recipe> pickRecipesForDays(RecipeSearchRequest daily, MealSlot slot, int count,
+            Set<Integer> dietIds, Set<Integer> usedThisWeek, Set<Integer> usedLastWeek) {
+        Set<Integer> avoid = new HashSet<>(usedThisWeek);
+        avoid.addAll(usedLastWeek);
+        List<Recipe> recipes = new ArrayList<>(
+                recipeSearchService.findRecipesForMeal(daily, slot, count, dietIds, avoid));
+        if (recipes.size() < count) {
+            Set<Integer> notThisWeek = new HashSet<>(usedThisWeek);
+            recipes.forEach(r -> notThisWeek.add(r.getRecipeId()));
+            recipes.addAll(recipeSearchService.findRecipesForMeal(
+                    daily, slot, count - recipes.size(), dietIds, notThisWeek));
+        }
+        if (recipes.size() < count) {
+            List<Recipe> anyMatching = recipeSearchService.findRecipesForMeal(daily, slot, count, dietIds, Set.of());
+            recipes = fillWithRepeats(recipes, anyMatching, count);
+        }
+        return recipes;
+    }
+
+    /** Profiilin suunnitelman reseptit aikaväliltä (molemmat päivät mukana). */
+    private Set<Integer> recipeIdsBetween(Long profileId, LocalDate from, LocalDate to) {
+        return selectionRepository.findByProfileIdAndPlanDateBetweenOrderByPlanDate(profileId, from, to).stream()
+                .map(s -> s.getRecipe().getRecipeId())
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Täydentää listan count kokoiseksi toistamalla sopivia reseptejä. Ensin tulevat viikolle uudet
+     * reseptit (fresh), sitten toistot (pool) kiertävässä järjestyksessä: 1, 2, 3, 1, 2, ...
+     * Jos sopivia reseptejä ei ole lainkaan, lista jää lyhyemmäksi (paikka jää tyhjäksi).
+     */
+    static List<Recipe> fillWithRepeats(List<Recipe> fresh, List<Recipe> pool, int count) {
+        List<Recipe> result = new ArrayList<>(fresh);
+        for (int i = 0; result.size() < count && !pool.isEmpty(); i++) {
+            result.add(pool.get(i % pool.size()));
+        }
+        return result;
     }
 
     private static MealPlanSelection newSuggestion(Long profileId, LocalDate date, String mealType, Recipe recipe) {

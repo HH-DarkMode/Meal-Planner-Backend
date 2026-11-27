@@ -36,8 +36,12 @@ public class RecipeSearchService {
             "dairy-free", "MILKFREE"
     );
 
-    /** Kuinka monesta parhaasta osumasta arvotaan lopulliset ehdotukset. */
-    private static final int TOP_POOL_SIZE = 30;
+    /**
+     * Kuinka monesta parhaasta osumasta arvotaan lopulliset ehdotukset. Iso joukko antaa
+     * vaihtelua viikosta toiseen. Kaikki joukon reseptit ovat silti kaloriväliin sopivia,
+     * ja makroiltaan ne ovat tavoitetta lähimpiä.
+     */
+    private static final int TOP_POOL_SIZE = 100;
 
     // Aterioiden energiaosuudet ovat MealSlots-taulukossa (paketti mealplan).
 

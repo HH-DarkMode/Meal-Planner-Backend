@@ -98,4 +98,13 @@ class MealSlotsTest {
         assertThat(MealSlots.isKnownMealType("Brunch")).isFalse();
         assertThat(MealSlots.isKnownMealType(null)).isFalse();
     }
+
+    /** Lounas ja päivällinen haetaan samasta reseptijoukosta (Lunch- ja Dinner-reseptit). */
+    @Test
+    void lunchAndDinnerShareTheMainMealCategory() {
+        List<MealSlot> slots = MealSlots.forMealsPerDay(4);
+        assertThat(slots).filteredOn(slot -> slot.mealType().equals("Lunch") || slot.mealType().equals("Dinner"))
+                .extracting(MealSlot::recipeCategory)
+                .containsOnly("Lunch|Dinner");
+    }
 }
