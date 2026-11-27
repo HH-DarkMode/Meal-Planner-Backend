@@ -71,11 +71,12 @@ public class WeekPlanService {
         rows.sort(Comparator.comparing(MealPlanSelection::getPlanDate)
                 .thenComparing(s -> MealSlots.ALL_MEAL_TYPES.indexOf(s.getMealType())));
 
-        // Varoitus lasketaan käyttäjän NYKYISEN ruokavalion mukaan (ei tallenneta kantaan, ettei vanhene).
-        boolean dietFilterActive = RecipeSearchService.hasIngredientBasedDiet(new HashSet<>(profile.getDiets()));
+        // Varoitus ja vegaanin vinkki lasketaan käyttäjän NYKYISEN ruokavalion mukaan
+        // (ei tallenneta kantaan, ettei vanhene).
+        Set<String> diets = new HashSet<>(profile.getDiets());
         return new WeekPlanDto(start,
                 slots.stream().map(MealSlot::mealType).toList(),
-                rows.stream().map(s -> toEntryWithWarning(s, dietFilterActive)).toList());
+                rows.stream().map(s -> toEntryWithWarning(s, diets)).toList());
     }
 
     /**
@@ -180,8 +181,7 @@ public class WeekPlanService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Uutta sopivaa reseptiä ei löytynyt");
         }
         row.setRecipe(recipes.get(0));
-        boolean dietFilterActive = RecipeSearchService.hasIngredientBasedDiet(daily.diets());
-        return toEntryWithWarning(selectionRepository.save(row), dietFilterActive);
+        return toEntryWithWarning(selectionRepository.save(row), daily.diets());
     }
 
     /** Käyttäjän päivän ateriat järjestyksessä (kalenteri tarvitsee nämä). */
@@ -223,10 +223,10 @@ public class WeekPlanService {
 
     // ---- apumetodit ----
 
-    /** Tietokannan rivi -> JSON-rivi diet-varoituksen kanssa (sama sääntö kuin reseptihaussa). */
-    private MealPlanEntryDto toEntryWithWarning(MealPlanSelection s, boolean dietFilterActive) {
+    /** Tietokannan rivi -> JSON-rivi diet-varoituksen ja vegaanin vinkin kanssa (sama sääntö kuin reseptihaussa). */
+    private MealPlanEntryDto toEntryWithWarning(MealPlanSelection s, Set<String> diets) {
         return new MealPlanEntryDto(s.getPlanDate(), s.getMealType(), s.isEaten(),
-                recipeSearchService.toSummary(s.getRecipe(), dietFilterActive), s.getStatus().name());
+                recipeSearchService.toSummary(s.getRecipe(), diets), s.getStatus().name());
     }
 
     /** Profiilin päivätavoitteet hakupyynnöksi. mealsPerDay = 1, koska osuudet tulevat MealSlots-taulukosta. */

@@ -5,6 +5,7 @@ import darkmode.demo.dto.RecipeSummaryDto;
 import darkmode.demo.entity.Recipe;
 import darkmode.demo.mealplan.MealSlots.MealSlot;
 import darkmode.demo.repository.RecipeRepository;
+import darkmode.demo.repository.RecipeRepository.IngredientName;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -28,10 +29,12 @@ public class RecipeSearchService {
      * Profiilisivun ruokavaliovalinta -> Fineli specdiet-koodi.
      * "high-protein" ja "low-carb" puuttuvat tästä tarkoituksella: ne eivät ole ainesosakohtaisia
      * luokituksia vaan reseptin makrosuhteita, ja ne tarkistetaan SQL-kyselyssä.
+     * Vegaanille haetaan reseptit kasvissyöjän luokituksella (ei lihaa eikä kalaa). Maitotuotteet ja
+     * kananmuna sallitaan, ja niistä näytetään korvausvinkki (ks. DietIngredientRules.isVeganSwap).
      */
     private static final Map<String, String> DIET_TO_SPECDIET_CODE = Map.of(
             "vegetarian", "LACOVEGE",
-            "vegan", "VEGAN",
+            "vegan", "LACOVEGE",
             "gluten-free", "GLUTFREE",
             "dairy-free", "MILKFREE"
     );
@@ -94,10 +97,8 @@ public class RecipeSearchService {
     /** /api/recipes/search -haku: varsinainen haku tehdään findMatchingRecipes-metodissa. */
     private List<RecipeSummaryDto> findSuggestions(RecipeSearchRequest request, String category, int count,
                                                     Set<Integer> dietCompatibleIds) {
-        // Varoitus näytetään vain, jos ruokavaliosuodatin oli käytössä.
-        boolean dietFilterActive = dietCompatibleIds != null;
         return findMatchingRecipes(request, category, count, dietCompatibleIds, Set.of()).stream()
-                .map(r -> toSummary(r, dietFilterActive))
+                .map(r -> toSummary(r, request.diets()))
                 .toList();
     }
 
@@ -199,7 +200,8 @@ public class RecipeSearchService {
             if (code == null) {
                 continue;
             }
-            Set<Integer> idsForCode = new HashSet<>(recipeRepository.findRecipeIdsCompatibleWithDiet(code));
+            Set<Integer> idsForCode = new HashSet<>(recipeRepository.findRecipeIdsCompatibleWithDiet(
+                    code, DietIngredientRules.blockedPattern(dietId), DietIngredientRules.allowedPattern()));
             if (result == null) {
                 result = idsForCode;
             } else {
@@ -210,12 +212,15 @@ public class RecipeSearchService {
     }
 
     /**
-     * Resepti -> JSON-vastauksen resepti, mukana tuntemattomat ainesosat ja diet-varoitus.
+     * Resepti -> JSON-vastauksen resepti. Mukana epävarmat ainesosat (⚠-varoitus) ja vegaanille
+     * korvattavat ainesosat (🌱-vinkki). diets = käyttäjän ruokavaliot profiilista.
      * Public, jotta viikkonäkymä ja suosikit näyttävät saman varoituksen kuin reseptihaku.
      */
-    public RecipeSummaryDto toSummary(Recipe r, boolean dietFilterActive) {
+    public RecipeSummaryDto toSummary(Recipe r, Set<String> diets) {
         // Yksi lisäkysely per palautettava resepti (enintään size kpl), joten nopeus riittää.
-        List<String> unmatched = recipeRepository.findUnmatchedIngredientNames(r.getRecipeId());
+        List<IngredientName> ingredients = recipeRepository.findIngredientNames(r.getRecipeId());
+        List<String> veganSwaps = diets.contains("vegan") ? veganSwapIngredients(ingredients) : List.of();
+        List<String> uncertain = uncertainIngredients(ingredients, veganSwaps);
         return new RecipeSummaryDto(
                 r.getRecipeId(),
                 r.getName(),
@@ -228,9 +233,31 @@ public class RecipeSearchService {
                 round(r.getFatPerServing()),
                 round(r.getCarbsPerServing()),
                 r.getNutritionSource(),
-                unmatched,
-                dietFilterActive && !unmatched.isEmpty()
+                uncertain,
+                hasIngredientBasedDiet(diets) && !uncertain.isEmpty(),
+                veganSwaps
         );
+    }
+
+    /**
+     * Epävarmat ainesosat: tunnistamattomat, joista ei tiedetä, sopivatko ne ruokavalioon.
+     * Mausteet ym. aina kasviperäiset jätetään pois, samoin vegaanin korvausvinkissä jo mainitut.
+     */
+    private static List<String> uncertainIngredients(List<IngredientName> ingredients, List<String> veganSwaps) {
+        return ingredients.stream()
+                .filter(i -> !i.getRecognized())
+                .map(IngredientName::getIngredient)
+                .filter(name -> !DietIngredientRules.isSafeForAllDiets(name) && !veganSwaps.contains(name))
+                .toList();
+    }
+
+    /** Vegaanille korvattavat ainesosat (maitotuotteet, kananmuna, hunaja, liivate), kukin kerran. */
+    private static List<String> veganSwapIngredients(List<IngredientName> ingredients) {
+        return ingredients.stream()
+                .map(IngredientName::getIngredient)
+                .filter(DietIngredientRules::isVeganSwap)
+                .distinct()
+                .toList();
     }
 
     /** Pyöristää yhteen desimaaliin (esim. 723,84 -> 723,8). */

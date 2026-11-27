@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -111,7 +112,7 @@ class FavoriteServiceTest {
 
     /**
      * Haku palauttaa oman profiilin suosikit repositoryn järjestyksessä (uusin ensin).
-     * Vegan on ainesosiin perustuva ruokavalio, joten diet-varoitus lasketaan (true).
+     * Profiilin ruokavaliot (vegan) annetaan reseptin muunnokselle varoitusta ja vinkkiä varten.
      */
     @Test
     void getFavoritesReturnsOwnFavoritesWithDietWarningCheck() {
@@ -119,8 +120,8 @@ class FavoriteServiceTest {
         FavoriteRecipe newer = favorite(7);
         FavoriteRecipe older = favorite(5);
         when(favoriteRepository.findByProfileIdOrderByCreatedAtDescIdDesc(42L)).thenReturn(List.of(newer, older));
-        when(recipeSearchService.toSummary(newer.getRecipe(), true)).thenReturn(summary(7));
-        when(recipeSearchService.toSummary(older.getRecipe(), true)).thenReturn(summary(5));
+        when(recipeSearchService.toSummary(newer.getRecipe(), Set.of("vegan"))).thenReturn(summary(7));
+        when(recipeSearchService.toSummary(older.getRecipe(), Set.of("vegan"))).thenReturn(summary(5));
 
         List<RecipeSummaryDto> result = service.getFavorites(authentication("user-a"));
 
@@ -172,7 +173,7 @@ class FavoriteServiceTest {
 
     private RecipeSummaryDto summary(int id) {
         return new RecipeSummaryDto(id, "Recipe " + id, null, null, null,
-                null, null, null, null, null, List.of(), false);
+                null, null, null, null, null, List.of(), false, List.of());
     }
 
     private UsernamePasswordAuthenticationToken authentication(String username) {

@@ -9,6 +9,8 @@ import java.util.List;
  * unmatchedIngredients: ainesosat, joita ei tunnisteta Fineliin.
  * dietWarning: true, jos ruokavaliosuodatin oli paalla ja reseptissa on
  * tuntemattomia ainesosia, eli ruokavaliosopivuutta ei voi taata.
+ * veganSwapIngredients: vegaanille korvattavat ainesosat (esim. butter, eggs), joille voi käyttää
+ * kasviperäistä vaihtoehtoa. Tyhjä lista muille kuin vegaaneille.
  */
 public record RecipeSummaryDto(
         Integer recipeId,
@@ -22,6 +24,7 @@ public record RecipeSummaryDto(
         Double carbsPerServing,
         String nutritionSource,
         List<String> unmatchedIngredients,
-        boolean dietWarning
+        boolean dietWarning,
+        List<String> veganSwapIngredients
 ) {
 }

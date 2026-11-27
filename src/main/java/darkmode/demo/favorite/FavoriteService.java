@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Suosikkireseptit (My recipes): haku, lisäys ja poisto.
@@ -56,11 +57,11 @@ public class FavoriteService {
         if (profile == null) {
             return List.of();
         }
-        // Varoitus näytetään vain, jos käyttäjällä on ainesosiin perustuva ruokavalio
-        // (esim. vegan). Profiilin ruokavalio voi muuttua, joten varoitus lasketaan joka haulla.
-        boolean dietFilterActive = RecipeSearchService.hasIngredientBasedDiet(new HashSet<>(profile.getDiets()));
+        // Varoitus ja vegaanin vinkki lasketaan profiilin ruokavalion mukaan. Ruokavalio voi muuttua,
+        // joten ne lasketaan joka haulla.
+        Set<String> diets = new HashSet<>(profile.getDiets());
         return favoriteRepository.findByProfileIdOrderByCreatedAtDescIdDesc(profile.getId()).stream()
-                .map(favorite -> recipeSearchService.toSummary(favorite.getRecipe(), dietFilterActive))
+                .map(favorite -> recipeSearchService.toSummary(favorite.getRecipe(), diets))
                 .toList();
     }
 
