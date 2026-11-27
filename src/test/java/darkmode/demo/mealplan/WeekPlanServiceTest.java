@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -119,6 +120,66 @@ class WeekPlanServiceTest {
 
         assertThat(week.entries()).isEmpty();
         verify(recipeSearchService, never()).findRecipesForMeal(any(), any(), anyInt(), any(), any());
+    }
+
+    /** Kun eri reseptejä on vain 2 mutta päiviä 7, loput päivät täytetään toistoilla (ei tyhjiä paikkoja). */
+    @Test
+    void getWeekRepeatsRecipesWhenNotEnoughDistinctOnes() {
+        profile.setMealsPerDay(1); // vain päivällinen
+        givenWeekRows(List.of());
+        givenSearchCandidates(1, 2);
+        givenSummaries();
+
+        WeekPlanDto week = service.getWeek(MONDAY, MONDAY, authentication());
+
+        // 7 päivällistä: ensin 2 eri reseptiä, sitten toistot 1, 2, 1, 2, 1
+        assertThat(week.entries()).hasSize(7);
+        assertThat(week.entries()).extracting(e -> e.recipe().recipeId())
+                .containsExactly(1, 2, 1, 2, 1, 2, 1);
+    }
+
+    /** Edellisen viikon reseptiä (7) ei ehdoteta uudelleen, kun uusia reseptejä on tarjolla. */
+    @Test
+    void getWeekAvoidsLastWeeksRecipes() {
+        profile.setMealsPerDay(1);
+        givenWeekRows(List.of());
+        givenLastWeekRows(List.of(row(MONDAY.minusDays(3), "Dinner", 7, MealPlanStatus.ACCEPTED)));
+        givenSearchReturnsUniqueRecipes();
+
+        service.getWeek(MONDAY, MONDAY, authentication());
+
+        // ensimmäinen haku jättää edellisen viikon reseptin pois
+        verify(recipeSearchService).findRecipesForMeal(any(), any(), eq(7), any(), argThat(ids -> ids.contains(7)));
+    }
+
+    /** Jos uudet reseptit loppuvat, edellisen viikon resepti tulee ennen saman viikon toistoja. */
+    @Test
+    void getWeekUsesLastWeeksRecipesBeforeRepeating() {
+        profile.setMealsPerDay(1);
+        givenWeekRows(List.of());
+        givenLastWeekRows(List.of(row(MONDAY.minusDays(3), "Dinner", 7, MealPlanStatus.ACCEPTED)));
+        // Sopivia reseptejä on vain kaksi: 1 (uusi) ja 7 (edellisellä viikolla)
+        givenSearchCandidates(1, 7);
+        givenSummaries();
+
+        WeekPlanDto week = service.getWeek(MONDAY, MONDAY, authentication());
+
+        // ensin uusi (1), sitten edellisen viikon (7), vasta sitten toistot
+        assertThat(week.entries()).extracting(e -> e.recipe().recipeId())
+                .containsExactly(1, 7, 1, 7, 1, 7, 1);
+    }
+
+    /** Jos aterialle ei löydy yhtään sopivaa reseptiä, paikka jää tyhjäksi (ei kaadu). */
+    @Test
+    void getWeekLeavesSlotEmptyWhenNoRecipeMatches() {
+        profile.setMealsPerDay(1);
+        givenWeekRows(List.of());
+        when(recipeSearchService.findRecipesForMeal(any(), any(), anyInt(), any(), any()))
+                .thenReturn(List.of());
+
+        WeekPlanDto week = service.getWeek(MONDAY, MONDAY, authentication());
+
+        assertThat(week.entries()).isEmpty();
     }
 
     /** Vegaanilla ja tuntemattomilla ainesosilla diet-varoitus näkyy viikkonäkymässä. */
@@ -258,6 +319,35 @@ class WeekPlanServiceTest {
     private void givenWeekRows(List<MealPlanSelection> rows) {
         when(selectionRepository.findByProfileIdAndPlanDateBetweenOrderByPlanDate(42L, MONDAY, SUNDAY))
                 .thenReturn(new ArrayList<>(rows));
+    }
+
+    /** Edellisen viikon (ma–su ennen MONDAY-päivää) rivit. */
+    private void givenLastWeekRows(List<MealPlanSelection> rows) {
+        when(selectionRepository.findByProfileIdAndPlanDateBetweenOrderByPlanDate(42L, MONDAY.minusDays(7), MONDAY.minusDays(1)))
+                .thenReturn(new ArrayList<>(rows));
+    }
+
+    /**
+     * Reseptihaku toimii kuin oikea haku: sopivia ovat vain annetut reseptit, ja haku jättää pois
+     * poissuljetut (5. parametri) ja palauttaa enintään pyydetyn määrän (3. parametri).
+     */
+    private void givenSearchCandidates(int... recipeIds) {
+        when(recipeSearchService.findRecipesForMeal(any(), any(), anyInt(), any(), any()))
+                .thenAnswer(inv -> {
+                    int count = inv.getArgument(2);
+                    Set<Integer> exclude = inv.getArgument(4);
+                    return IntStream.of(recipeIds)
+                            .filter(id -> !exclude.contains(id))
+                            .limit(count)
+                            .mapToObj(WeekPlanServiceTest::recipe)
+                            .toList();
+                });
+    }
+
+    /** Reseptin muunnos JSON-muotoon, jotta reseptin id voidaan tarkistaa vastauksesta. */
+    private void givenSummaries() {
+        when(recipeSearchService.toSummary(any(), eq(false)))
+                .thenAnswer(inv -> summary(inv.<Recipe>getArgument(0).getRecipeId(), false));
     }
 
     /** Reseptihaku palauttaa joka kutsulla pyydetyn määrän uusia reseptejä (id:t eivät toistu). */

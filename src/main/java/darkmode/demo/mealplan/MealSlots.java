@@ -52,10 +52,12 @@ public final class MealSlots {
     }
 
     // Reseptikannan kategoriat. Kaikki välipalat haetaan Snack-kategoriasta.
-    // Iltapala (Supper) haetaan aamupalareseptien joukosta (päätetty 7.11.2026).
+    // Iltapala (Supper) haetaan aamupalareseptien joukosta.
+    // Lounas ja päivällinen haetaan samasta joukosta (Lunch- ja Dinner-reseptit), koska molemmat ovat
+    // lämpimiä pääaterioita ja reseptikannan jako niiden välillä on sattumanvarainen. Näin reseptejä riittää
+    // useammalle päivälle. "|" tarkoittaa "tai" (tietokantahaun säännöllinen lauseke).
     private static final String CATEGORY_BREAKFAST = "Breakfast";
-    private static final String CATEGORY_LUNCH = "Lunch";
-    private static final String CATEGORY_DINNER = "Dinner";
+    private static final String CATEGORY_MAIN_MEAL = "Lunch|Dinner";
     private static final String CATEGORY_SNACK = "Snack";
 
     /**
@@ -114,11 +116,11 @@ public final class MealSlots {
     }
 
     private static MealSlot lunch(double share) {
-        return new MealSlot(LUNCH, share, CATEGORY_LUNCH);
+        return new MealSlot(LUNCH, share, CATEGORY_MAIN_MEAL);
     }
 
     private static MealSlot dinner(double share) {
-        return new MealSlot(DINNER, share, CATEGORY_DINNER);
+        return new MealSlot(DINNER, share, CATEGORY_MAIN_MEAL);
     }
 
     private static MealSlot supper(double share) {
